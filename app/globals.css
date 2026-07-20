@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --navy: #0b1e4d;
+    --orange: #f2841c;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .field-label {
+    @apply block text-sm font-bold text-ink-soft mb-1.5;
+  }
+  .field-input {
+    @apply w-full rounded-xl border border-line bg-bg px-4 py-3 text-sm
+      focus:outline-none focus:ring-2 focus:ring-navy/40 focus:border-navy transition;
+  }
+  .btn-primary {
+    @apply w-full rounded-full bg-gradient-to-l from-orange to-orange-dark text-white
+      font-bold py-3 text-sm shadow-lg shadow-orange/20 hover:-translate-y-0.5 transition;
+  }
+  .btn-ghost {
+    @apply rounded-full border border-line px-6 py-3 text-sm font-bold text-navy
+      hover:border-navy transition;
+  }
+}

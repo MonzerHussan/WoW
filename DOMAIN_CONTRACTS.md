@@ -1,0 +1,142 @@
+# DOMAIN_CONTRACTS.md — Binding Domain Contracts
+
+These contracts bind all future sprints. Tables named here but not yet
+created (Jobs, Applications, Projects) MUST follow these shapes when their
+sprint arrives — that is how we avoid restructuring without building dead
+tables today.
+
+---
+
+## 1. Transparency & Privacy Charter (approved — foundational)
+
+The platform's stated principle: **transparency is our foundation, and we
+avoid legal complexity by design, not by disclaimer.**
+
+| # | Rule | Enforced by |
+|---|---|---|
+| T1 | The user sees 100% of their own Career DNA — every axis, every score, every recommendation. | RLS owner policies (004) |
+| T2 | Every computed score ships with a human-readable explanation of its factors and how to improve them. A score without an explanation cannot exist. | `career_scores.explanation NOT NULL` (004) |
+| T3 | Organizations see **nothing** of a user's DNA beyond the public profile unless the user grants that specific org a scope (`scores` / `skills` / `full_dna`). Consent is per-organization, revocable anytime. | `career_consents` table (004) + server-side checks |
+| T4 | **Personality data is never shareable with organizations. Ever.** It is excluded from every consent scope by schema design. | `career_consents.scope` check constraint has no personality option |
+| T5 | Personality science: Big Five is the primary instrument. DISC/MBTI are optional self-insight enrichment and MUST NOT feed scores, matching, or employer-visible outputs. | Contract rule; enforced in scoring code review |
+| T6 | Every AI-generated recommendation is attributed to a `system_actor`, stored, and measurable. Nova's success metric is its acted-on rate. | `career_recommendations` (004) |
+| T7 | Automated scores influence *suggestions*, never automated rejections. Any employer-facing ranking derived from scores requires the T3 consent and must show the user it happened. | Contract rule for the Jobs sprint |
+| T8 | Account deletion: `status='deleted'` is soft (data inert). Hard erasure exists (`data.hard_delete`, super_admin) and honors user data-deletion requests. | 003 |
+| T9 | Minors: guardian-consent policy is a **launch blocker** (see RBAC.md). | Policy gate before public signup |
+
+## 2. Skills contract (implemented in 004 — the backbone)
+
+- One taxonomy: `skills` + `skill_categories`.
+- One linkage: `entity_skills (entity_type, entity_id, skill_id, level, source)`.
+- **Every** future entity that "has skills" (job, project, assessment)
+  extends the `entity_type` check constraint — never a new linkage table.
+- Skill `source` distinguishes claims from verified levels. **Binding weight
+  order for matching:** `certification_verified` > `employer_verified` >
+  `assessment` > `instructor` > `system` > `self`.
+- **Evidence rule:** a skill claim without evidence is display-only; only
+  evidenced skills (via `skill_evidence`) feed matching and scores. Each
+  `entity_skills` row carries a `confidence` (0–100) recomputed from its
+  evidence server-side (baseline weights documented in migration 005;
+  unverified external links count at 50%).
+
+## 2b. Trust contract (migration 005)
+
+- The numeric Trust Score reuses `career_scores` (`score_type='trust'`) —
+  same time-series + mandatory-explanation machinery as every other score
+  (T2 applies in full: the user always sees *why* and *how to improve*).
+- Feeding events live in `trust_events` (signed weights, auditable,
+  server-written only — a user can never write their own trust events).
+- **The badge/number split (legal-safety decision):**
+  - Objective verification *facts* (identity verified ✓, certified ✓) are
+    public profile badges.
+  - The behavioral *number* is employer-visible only under a T3 `scores`
+    consent, like every other score, and per T7 it ranks — it never
+    auto-rejects.
+
+## 2c. Nova quality contract (migration 005)
+
+- Every recommendation carries `confidence_score`; lifecycle is
+  `pending → accepted / rejected / ignored / implemented / dismissed`.
+- The `nova_quality_metrics` view (implementation rate per recommendation
+  kind) is Nova's own KPI — if implementation rate drops, Nova's prompts
+  or targeting get revisited before adding new AI features.
+
+## 3. Jobs & Applications contract (tables in the Jobs sprint)
+
+```
+jobs:
+  owner_type ('organization'|'user')   -- org posting OR individual client
+  owner_id
+  is_published boolean                  -- guest visibility rule applies
+  skills via entity_skills('job', id)
+  status (draft|published|closed)
+
+applications:
+  job_id, user_id, status (applied|shortlisted|interview|offer|rejected|withdrawn)
+  -- matching score shown to employer ONLY under a T3 'scores' consent,
+  -- and the applicant is told their score was shared (T7).
+
+freelance_projects: same owner polymorphism; proposals reference
+  freelancer users; disputes resolve via support_lead (003).
+```
+
+## 4. Employer visibility contract (Employer Portal sprint)
+
+- Candidate search returns public profile + skills **only**.
+- Score-ranked shortlists require per-candidate T3 consent.
+- `viewer` org_role = read/filter only; `recruiter` may contact; contact
+  events are logged to `audit_log`.
+- Sponsored training reports (`training_manager`) show progress and
+  completion — never personality, never raw DNA.
+
+## 5. LMS ↔ Career DNA feed contract (wired in Sprint 3 services)
+
+| Event | Feeds |
+|---|---|
+| lesson completed | `lesson_progress` → Learning DNA + points (`LESSON_COMPLETE`) |
+| quiz passed (auto/human/hybrid) | `quiz_attempts` → Skills DNA via `entity_skills(source='assessment')` + points |
+| certificate issued | `certificates` → Experience DNA + Employability recompute |
+| any of the above | may trigger a `career_scores` recompute — always a NEW time-series row, never an update |
+
+## 6. Scoring contract
+
+- Score types now: `employability`, `promotion` (0–100).
+- Computed only by `system_actors`; inserted server-side; time-series.
+- Explanation shape: `{factors: [{name, weight, value, tip}]}` — `tip` is
+  the actionable "how to improve this factor" line shown to the user.
+- Recompute triggers are event-driven (section 5), not on-read.
+
+## 7. Workforce outsourcing contract (migration 006 — approved model)
+
+**Legal model (binding):** the platform is a technology intermediary and
+quality guarantor. A **licensed third-party partner** (an organization with
+the `workforce_partner` capability) is the legal employer / contract
+administrator and bears payroll, visas, labor-law and administrative
+obligations. An `outsourcing` contract cannot exist without a partner_org
+(enforced by check constraint). The platform is never the employer of
+record.
+
+**Two contract types, one table (`workforce_contracts`):**
+- `guaranteed_placement` — client hires talent directly; platform
+  guarantees quality per published `guarantee_terms`.
+- `outsourcing` — partner employs the talent; client receives the service.
+
+**Selective guarantee (binding):** guarantees attach only to talent that
+clears published thresholds (latest trust score, platform certificate,
+skill confidence) — enforced by a DB trigger at contract activation.
+Guarantee terms are **public and versioned**: the guarantee is a published
+product, never an ad-hoc promise.
+
+**Transparency rules extended:**
+- The talent always sees every placement review written about them (RLS).
+- Placement reviews feed the talent's DNA: each review writes a
+  `trust_events('org_rating_received')` row and may add
+  `skill_evidence('manager_review')` for contracted skills (server-side
+  wiring in the UI sprint).
+- Guarantee claims (`replacement` / `refund`) follow a managed lifecycle
+  reviewed under the `guarantees.review` permission (support_lead /
+  finance_manager / super_admin).
+
+**Revenue note for Sprint 7:** placement fees and outsourcing margins are
+recorded in `commercial_terms` (jsonb) now; billing rails are built in the
+Subscriptions sprint alongside the other revenue streams.
