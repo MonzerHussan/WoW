@@ -84,21 +84,84 @@
   `guarantees.review` permission).
 - Run order now: 001 → 002 → 003 → 004 → 005 → 006.
 
-## Sprint 3 — LMS UI + DNA wiring (proposed next)
-- Course catalog + course page + lesson player (features/lms/).
-- Quiz taking (auto grading first), assessor grading queue (human/hybrid).
-- The LMS→DNA feed contract (section 5 of DOMAIN_CONTRACTS.md): lesson
-  completion → points + Learning DNA; quiz pass → assessed skills; first
-  `career_scores` computation with explanations.
-- middleware: treat non-`active` profiles.status as unauthenticated
-  (carried task from 003).
-- Rate limiter → shared store before Nova expansion (carried from 1.5).
+## Sprint 3 — LMS + Personal Agent + Profile + DNA wiring ✅
+Delivered: `features/lms/` (course catalog, course page, lesson player,
+quiz taking, assessor grading queue), `features/agent/` (replaces
+`features/nova/` — per-user `chosen_name` picked at first use, no fixed
+"Nova" branding in UI, reads full DNA context, writes real
+`career_recommendations`), `features/profile/` (`/profile`: DNA axes,
+skills+evidence, certificates, Employability/Trust scores, active
+capabilities with self-service activation, agent recommendations).
 
-## Sprint 3 — AI Agents
-- Replace in-memory rate limiter with a shared store (Upstash Redis) —
-  the one remaining High finding in SECURITY.md.
-- Nova proactively referencing real enrollment/progress data,
-  "Project Horizon" episode unlocking tied to real points.
+**Also fixed (found the same way — real login, not code review):**
+`shared/lib/supabase/server.ts`'s cookie `set`/`remove` calls threw
+uncaught whenever Supabase tried to refresh an aging session token
+mid-render on a plain Server Component (Next.js only allows cookie
+writes from a Server Action or Route Handler) — every page crashed to
+`app/error.tsx` once a session was old enough. Wrapped in `try/catch`
+per Supabase's own documented guidance (`middleware.ts` already
+refreshes sessions on every protected request, so a Server Component's
+own write attempt failing is expected and safe to swallow).
+
+**Content:** `009_seed_pmp_level1.sql` — the first real course (PMP Level
+1, 6 modules, 18 lessons, 18-question hybrid final assessment).
+`011_pmp_level1_course_skills.sql` — tags the course with its 4 skills
+via `entity_skills(entity_type='course')`, the missing link the quiz-pass
+DNA feed needs to have anything to credit.
+
+**LMS→DNA feed contract activated** (DOMAIN_CONTRACTS.md §5): lesson
+complete → `lesson_progress` + `LESSON_COMPLETE` points (server-verified
+via RLS-gated read, not a client flag). Quiz pass, auto or
+assessor-confirmed → `entity_skills(source='assessment')` +
+`skill_evidence('quiz_attempt')` + points, all through a genuinely
+working write path (see below). Auto-pass also recomputes
+`career_scores(employability)` with a real `{factors, tip}` explanation;
+the assessor-confirmed path does **not** yet (deferred — see below).
+
+**Acceptance testing (per TESTING_POLICY.md, added this sprint) found
+and fixed 5 real RLS write-permission gaps** that unit-level code review
+never would have caught — only surfaced by testing with two separate
+real accounts (a student and an assessor), not one account playing both
+roles:
+- `migrations/009-013`: `courses.track` NOT NULL omission and a
+  `quiz_purpose` column that never existed in the seed script; an
+  ambiguous `profiles` embed in the assessor queue query (`quiz_attempts`
+  has two FKs into `profiles` — `user_id` and `graded_by` — so
+  `profiles(...)` alone is genuinely ambiguous to PostgREST); a missing
+  UPDATE policy that silently let an assessor's "approve" click affect
+  zero rows when grading someone else's attempt (masked in the first
+  test only because that account happened to grade its own submission);
+  and — the one that actually blocked points/skills/evidence from ever
+  being written — `entity_skills`, `skill_evidence`, `career_scores`,
+  `user_badges`, and `system_actors` each had either no policy or no
+  grant covering a write/read made by anyone other than the row's own
+  owner.
+- **Points are never awarded via a broad RLS policy on `profiles`** —
+  that would reopen the exact class of bug SECURITY.md already
+  documents as fixed once. Instead, `award_quiz_points(attempt_id)`, a
+  `security definer` function that only pays out for a real, passed,
+  not-yet-paid attempt graded by the calling assessor themselves
+  (row-locked, replay-tested — a second call for the same attempt
+  correctly returns `false` and awards nothing). See SECURITY.md.
+
+**Deferred, explicit, documented (not silently skipped):**
+- `career_scores(employability)` recompute when an assessor confirms a
+  hybrid/human attempt for someone else — needs the same
+  security-definer-function treatment as points before it's safe to
+  wire up. Tracked in TECH_DEBT.md.
+- Third-party badge grants (an org/system awarding a badge the user
+  didn't trigger themselves) — same reasoning, same deferral.
+- middleware: treat non-`active` profiles.status as unauthenticated
+  (carried task from 003 — still not done).
+- Rate limiter → shared store before the agent gets real public traffic
+  (carried from 1.5 — still not done).
+
+## Sprint 3.1 — Beta (5-10 real users, 1 week) — next
+Defined in `TESTING_POLICY.md`. Numeric success criteria (signup
+completion, dashboard latency, zero raw-error leaks, lesson+points
+completion, agent uptime) before any capacity investment (Redis,
+Supabase upgrade) — measure real usage first, same philosophy as
+deferring Subscriptions until there's a reason to build them.
 
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal

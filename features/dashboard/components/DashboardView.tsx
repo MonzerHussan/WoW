@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { getAccountTypeLabel } from "@/shared/constants/account-types";
@@ -8,7 +9,7 @@ import { PointsCard } from "./PointsCard";
 import { BadgesList } from "./BadgesList";
 
 /**
- * `assistantSlot` keeps this feature decoupled from features/nova —
+ * `assistantSlot` keeps this feature decoupled from features/agent —
  * cross-feature composition happens in app/dashboard/page.tsx, per the
  * import-direction rule in CODING_GUIDELINES.md.
  */
@@ -51,7 +52,15 @@ export async function DashboardView({ assistantSlot }: { assistantSlot?: ReactNo
           <span className="font-display font-black text-navy text-lg">WOW</span>
           <span className="text-ink-soft text-sm"> | {t("dashboard.title", lang)}</span>
         </div>
-        <LogoutButton label={t("auth.logout", lang)} />
+        <div className="flex items-center gap-4">
+          <Link href="/courses" className="text-sm font-bold text-ink-soft hover:text-navy">
+            {t("lms.catalogTitle", lang)}
+          </Link>
+          <Link href="/profile" className="text-sm font-bold text-ink-soft hover:text-navy">
+            {t("profile.title", lang)}
+          </Link>
+          <LogoutButton label={t("auth.logout", lang)} />
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-5 mb-8">

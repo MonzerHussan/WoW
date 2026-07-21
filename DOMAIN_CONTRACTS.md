@@ -19,7 +19,7 @@ avoid legal complexity by design, not by disclaimer.**
 | T3 | Organizations see **nothing** of a user's DNA beyond the public profile unless the user grants that specific org a scope (`scores` / `skills` / `full_dna`). Consent is per-organization, revocable anytime. | `career_consents` table (004) + server-side checks |
 | T4 | **Personality data is never shareable with organizations. Ever.** It is excluded from every consent scope by schema design. | `career_consents.scope` check constraint has no personality option |
 | T5 | Personality science: Big Five is the primary instrument. DISC/MBTI are optional self-insight enrichment and MUST NOT feed scores, matching, or employer-visible outputs. | Contract rule; enforced in scoring code review |
-| T6 | Every AI-generated recommendation is attributed to a `system_actor`, stored, and measurable. Nova's success metric is its acted-on rate. | `career_recommendations` (004) |
+| T6 | Every AI-generated recommendation is attributed to a `system_actor`, stored, and measurable. The agent's success metric is its acted-on rate. **Note (Sprint 3):** the `system_actors` row is still named `'nova'` internally (an audit-trail label, never shown to users) — the user-facing name is whatever they chose in `user_agent_profiles.chosen_name`. These are deliberately decoupled: one user's agent identity, one fixed internal attribution key. | `career_recommendations` (004) |
 | T7 | Automated scores influence *suggestions*, never automated rejections. Any employer-facing ranking derived from scores requires the T3 consent and must show the user it happened. | Contract rule for the Jobs sprint |
 | T8 | Account deletion: `status='deleted'` is soft (data inert). Hard erasure exists (`data.hard_delete`, super_admin) and honors user data-deletion requests. | 003 |
 | T9 | Minors: guardian-consent policy is a **launch blocker** (see RBAC.md). | Policy gate before public signup |
@@ -53,12 +53,12 @@ avoid legal complexity by design, not by disclaimer.**
     consent, like every other score, and per T7 it ranks — it never
     auto-rejects.
 
-## 2c. Nova quality contract (migration 005)
+## 2c. Agent quality contract (migration 005; `nova_quality_metrics` is a table/view name, not a UI label — see T6)
 
 - Every recommendation carries `confidence_score`; lifecycle is
   `pending → accepted / rejected / ignored / implemented / dismissed`.
 - The `nova_quality_metrics` view (implementation rate per recommendation
-  kind) is Nova's own KPI — if implementation rate drops, Nova's prompts
+  kind) is the agent's own KPI — if implementation rate drops, its prompts
   or targeting get revisited before adding new AI features.
 
 ## 3. Jobs & Applications contract (tables in the Jobs sprint)
@@ -89,14 +89,23 @@ freelance_projects: same owner polymorphism; proposals reference
 - Sponsored training reports (`training_manager`) show progress and
   completion — never personality, never raw DNA.
 
-## 5. LMS ↔ Career DNA feed contract (wired in Sprint 3 services)
+## 5. LMS ↔ Career DNA feed contract (wired in Sprint 3 — status below)
 
-| Event | Feeds |
-|---|---|
-| lesson completed | `lesson_progress` → Learning DNA + points (`LESSON_COMPLETE`) |
-| quiz passed (auto/human/hybrid) | `quiz_attempts` → Skills DNA via `entity_skills(source='assessment')` + points |
-| certificate issued | `certificates` → Experience DNA + Employability recompute |
-| any of the above | may trigger a `career_scores` recompute — always a NEW time-series row, never an update |
+| Event | Feeds | Status |
+|---|---|---|
+| lesson completed | `lesson_progress` → Learning DNA + points (`LESSON_COMPLETE`) | ✅ live, server-verified |
+| quiz passed, auto-graded | `quiz_attempts` → Skills DNA via `entity_skills(source='assessment')` + `skill_evidence('quiz_attempt')` + points + `career_scores(employability)` recompute | ✅ live |
+| quiz passed, human/hybrid (assessor-confirmed) | same skills/evidence/points feed | ✅ live |
+| — `career_scores` recompute specifically for this path | needs the same security-definer-function treatment as `award_quiz_points()` before it's safe; a broad RLS policy letting an assessor write another user's score was deliberately rejected, same reasoning as points | ⬜ deferred (TECH_DEBT.md #9) |
+| certificate issued | `certificates` → Experience DNA + Employability recompute | ⬜ not built — no issuance flow/UI exists yet |
+| any of the above (once live) | a `career_scores` recompute — always a NEW time-series row, never an update | ✅ (auto path) |
+
+A course must be tagged with the skills it teaches
+(`entity_skills(entity_type='course', ...)`) for the quiz-pass feed to
+have anything to credit — this was the missing link found during Sprint
+3 acceptance testing (migration 011) even after the write-path RLS
+gaps were fixed; a course with no skill tags is a silent no-op, not an
+error, by design (a content-authoring gap, not a code failure).
 
 ## 6. Scoring contract
 

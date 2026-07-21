@@ -78,7 +78,7 @@ export function translateAuthError(error: unknown, lang: Lang): string {
   return dictionary.common.somethingWentWrong[lang];
 }
 
-/** Shared connectivity check for submit handlers outside auth (e.g. Nova). */
+/** Shared connectivity check for submit handlers outside auth (e.g. the agent). */
 export function isOffline(): boolean {
   return typeof navigator !== "undefined" && !navigator.onLine;
 }

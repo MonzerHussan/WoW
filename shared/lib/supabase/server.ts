@@ -17,10 +17,21 @@ export function supabaseServer() {
           return cookieStore.get(name)?.value;
         },
         set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options });
+          // Next.js only allows cookie writes from a Server Action or Route
+          // Handler — a plain Server Component render (e.g. a page.tsx just
+          // fetching data) throws here whenever the Supabase client tries to
+          // refresh an aging session token mid-render. middleware.ts already
+          // refreshes the session on every protected-route request, so this
+          // failure is expected and safe to swallow (official Supabase
+          // Next.js SSR guidance) rather than crashing the page.
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {}
         },
         remove(name: string, options: any) {
-          cookieStore.set({ name, value: "", ...options });
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch {}
         },
       },
     }

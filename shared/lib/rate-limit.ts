@@ -6,9 +6,9 @@
  * (which Vercel/most serverless hosts are), each instance has its own
  * counter, so the *effective* limit is (limit × instance count), not a
  * true global limit. This is still strictly better than no limiting at
- * all, and is a reasonable stopgap for Sprint 1.5. Before Nova is exposed
- * to real traffic (Sprint 3), replace this with a shared store (Upstash
- * Redis token bucket) — tracked in SECURITY.md.
+ * all, and is a reasonable stopgap for Sprint 1.5. Before the agent (Sprint
+ * 3, features/agent/) is exposed to real traffic at scale, replace this
+ * with a shared store (Upstash Redis token bucket) — tracked in SECURITY.md.
  */
 const buckets = new Map<string, { count: number; resetAt: number }>();
 
