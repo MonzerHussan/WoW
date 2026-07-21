@@ -300,6 +300,24 @@ export const dictionary = {
       en: "Post your hiring need and let the platform match you with genuinely qualified candidates — full-time or freelance.",
     },
     personaCompanyCta: { ar: "انشر وظيفة الآن", en: "Post a Role Now" },
+    personaInstructorTitle: {
+      ar: "شارك خبرتك… وابنِ أثرك التعليمي",
+      en: "Share your expertise — build your teaching impact",
+    },
+    personaInstructorSub: {
+      ar: "صمّم دورات، درّب متعلمين حقيقيين، واكسب مقابل خبرتك — مع تتبّع أثر تدريبك على مسارهم المهني الفعلي.",
+      en: "Design courses, train real learners, and earn from your expertise — with visibility into how your teaching actually shapes their career path.",
+    },
+    personaInstructorCta: { ar: "ابدأ التدريس على WOW", en: "Start Teaching on WOW" },
+    personaInstituteTitle: {
+      ar: "وسّع برامجك التدريبية… بأثر مقاس",
+      en: "Scale your training programs — with measurable impact",
+    },
+    personaInstituteSub: {
+      ar: "أدر برامجك التدريبية لمجموعات أكبر من الدارسين، واحصل على بيانات فعلية عن تقدّمهم وجاهزيتهم لسوق العمل.",
+      en: "Run your training programs for larger groups of learners, with real data on their progress and job-market readiness.",
+    },
+    personaInstituteCta: { ar: "سجّل معهدك", en: "Register Your Institute" },
   },
 
   lms: {

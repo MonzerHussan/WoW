@@ -4,7 +4,7 @@ import { AccountType } from "@/shared/types";
 export type LandingStage = "edu" | "hire" | "promote";
 
 export type LandingPersona = {
-  id: "student" | "seeker" | "freelancer" | "employee" | "company";
+  id: "student" | "seeker" | "freelancer" | "employee" | "company" | "instructor" | "institute";
   /** Tab label reuses the matching ACCOUNT_TYPES entry (single source). */
   accountType: AccountType;
   titleKey: TranslationKey;
@@ -52,6 +52,22 @@ export const LANDING_PERSONAS: LandingPersona[] = [
     titleKey: "landing.personaCompanyTitle",
     subKey: "landing.personaCompanySub",
     ctaKey: "landing.personaCompanyCta",
+    stage: "edu",
+  },
+  {
+    id: "instructor",
+    accountType: "instructor",
+    titleKey: "landing.personaInstructorTitle",
+    subKey: "landing.personaInstructorSub",
+    ctaKey: "landing.personaInstructorCta",
+    stage: "edu",
+  },
+  {
+    id: "institute",
+    accountType: "institute",
+    titleKey: "landing.personaInstituteTitle",
+    subKey: "landing.personaInstituteSub",
+    ctaKey: "landing.personaInstituteCta",
     stage: "edu",
   },
 ];
