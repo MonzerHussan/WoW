@@ -11,6 +11,14 @@ import { agentRequestSchema, agentRecommendationSchema } from "@/shared/schemas/
 import { rateLimit } from "@/shared/lib/rate-limit";
 import { logger } from "@/shared/lib/logger";
 
+// Vercel's default serverless function timeout (10s on Hobby) is shorter
+// than this route's own worst case: a 15s OpenAI timeout plus one retry
+// can take up to ~30s. Without this, Vercel would kill the function
+// before our own timeout/retry logic ever gets to run, surfacing as a
+// silent 504 instead of the graceful "unavailable" message below —
+// directly the agent-uptime metric TESTING_POLICY.md's Beta gate checks.
+export const maxDuration = 30;
+
 let openai: OpenAI | null = null;
 function getOpenAI() {
   if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
