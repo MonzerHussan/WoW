@@ -51,10 +51,10 @@ export function LandingHero({ lang }: { lang: Lang }) {
             {t("landing.heroEyebrow", lang)}
           </div>
 
-          <h1 className="font-display font-black text-navy text-3xl md:text-[44px] leading-[1.28]">
+          <h1 className="font-display font-black text-navy text-3xl md:text-[50px] leading-[1.18] tracking-tight">
             {t(persona.titleKey, lang)}
           </h1>
-          <p className="text-ink-soft text-[16.5px] max-w-[520px] mt-4">{t(persona.subKey, lang)}</p>
+          <p className="text-ink-soft text-[17px] max-w-[520px] mt-5 leading-relaxed">{t(persona.subKey, lang)}</p>
 
           <div className="flex gap-3.5 mt-7 flex-wrap">
             <a

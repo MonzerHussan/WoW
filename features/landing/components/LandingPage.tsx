@@ -157,6 +157,19 @@ export function LandingPage() {
         </Wrap>
       </section>
 
+      {/* ===== OUTCOME STAT (honest — no fabricated number yet) ===== */}
+      <section className="pb-[90px]">
+        <Wrap>
+          <div className="text-center max-w-[640px] mx-auto">
+            <Eyebrow>{t("landing.outcomeStatEyebrow")}</Eyebrow>
+            <div className="font-display font-black text-navy text-[52px] md:text-[68px] leading-none tracking-tight">
+              {t("landing.outcomeStatPlaceholder")}
+            </div>
+            <p className="text-ink-soft mt-4 text-[15px]">{t("landing.outcomeStatCaption")}</p>
+          </div>
+        </Wrap>
+      </section>
+
       {/* ===== COMPANIES ===== */}
       <section id="companies" className="pb-[90px]">
         <Wrap className="grid grid-cols-1 md:grid-cols-2 gap-14 items-center">

@@ -215,6 +215,12 @@ export const dictionary = {
     stat2: { ar: "شركة شريكة", en: "Partner companies" },
     stat3: { ar: "فرصة توظيف ناجحة", en: "Successful placements" },
     stat4: { ar: "ترقية مهنية مدعومة", en: "Promotions supported" },
+    outcomeStatEyebrow: { ar: "الأثر الحقيقي", en: "Real impact" },
+    outcomeStatPlaceholder: { ar: "قيد القياس", en: "Measuring now" },
+    outcomeStatCaption: {
+      ar: "من خريجي WOW يدخلون مجالهم المستهدف خلال 6 أشهر — نُحدّث هذا الرقم بمجرد توفر بيانات كافية من Beta، لا قبل ذلك.",
+      en: "of WOW graduates land their target field within 6 months — we'll publish a real number once Beta gives us enough data, not before.",
+    },
     compEyebrow: { ar: "لأصحاب العمل", en: "For Employers" },
     compTitle: {
       ar: "وصول مباشر لكفاءات جاهزة فعليًا للعمل",
@@ -265,10 +271,10 @@ export const dictionary = {
       ar: "© 2026 WOW — عالم العمل",
       en: "© 2026 WOW — World of Work",
     },
-    personaStudentTitle: { ar: "اكتشف سوق العمل… قبل ما توصله", en: "Discover the job market — before you get there" },
+    personaStudentTitle: { ar: "اكتشف سوق العمل، قبل أن تصل إليه", en: "Discover the job market — before you reach it" },
     personaStudentSub: {
-      ar: "اختبارات ميول مهنية، مسارات تعلّم مبسّطة، وخريطة واضحة للمهارات المطلوبة – حتى تدخل سوق العمل وأنت جاهز فعلاً.",
-      en: "Career-interest tests, simplified learning paths, and a clear map of required skills — so you enter the job market truly ready.",
+      ar: "اختبارات ميول مهنية، مسارات تعلّم مركّزة، وخريطة واضحة لما يحتاجه سوق العمل فعلاً — لتدخله وأنت جاهز، لا مجرد متفائل.",
+      en: "Career-interest tests, focused learning paths, and a clear map of what the market actually needs — so you walk in ready, not just hopeful.",
     },
     personaStudentCta: { ar: "استكشف مسارك المهني", en: "Explore Your Path" },
     personaSeekerTitle: { ar: "من التدريب… إلى أول وظيفة", en: "From training — to your first job" },
