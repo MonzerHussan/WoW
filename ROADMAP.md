@@ -180,3 +180,89 @@ deferring Subscriptions until there's a reason to build them.
 
 **Immediate ask:** approve Sprint 2 scope above (LMS + the feature-based
 restructuring as its first task) before implementation starts.
+
+---
+
+## رؤية استراتيجية كبرى — Grand Strategic Vision
+
+**Documentation only — no sprint number, no committed order, no code.**
+These are long-term product directions the owner wanted captured while
+still fresh, kept deliberately separate from the committed Sprint N plan
+above. Nothing here changes the current sprint order; nothing here is a
+promise of when (or whether) it gets built. Each one is written as "why
+this matters and how it would connect to what already exists," not as an
+implementation plan — that design pass happens if and when one of these
+is actually prioritized.
+
+### 1. الشبكة الاجتماعية المهنية — Professional Social Network
+
+WOW already has the core building blocks for this — a per-user Career
+DNA, `entity_skills`/`skill_evidence`, active capabilities, an agent that
+reads full DNA context — but all of it is single-player today: a user
+only ever sees their own `/profile` page. A social layer would let a
+user's Career DNA become *discoverable to others* (colleagues,
+instructors, classmates, potential employers), always opt-in and scoped
+through the existing per-org consent model (DOMAIN_CONTRACTS.md T3/T7)
+— never automatic, never a blanket "public profile" toggle. Concretely,
+this could mean: consent-gated public/semi-public profile pages; a real
+achievements feed (course completions, certificates, live-session
+participation) peers can see; connecting with instructors or classmates
+met through a shared course (the new invite-code personal courses and
+live sessions are natural on-ramps for this); and endorsements tied to
+real `skill_evidence` rather than the generic, credibility-free
+"recommendations" that devalued this feature on other platforms. This is
+the highest-leverage of the three visions below because it compounds —
+every course, badge, and live session the platform already produces
+becomes distribution fuel for the platform itself, instead of a dead end
+at a profile page only its owner ever opens. It also carries the
+platform's highest privacy stakes, so any real design pass must start
+from the Transparency & Privacy Charter (T1–T9) already binding in
+DOMAIN_CONTRACTS.md, not have consent bolted on afterward.
+
+### 2. بيئة الفريلانس الوسيطة — Freelance Intermediary Environment
+
+The `freelancer` and `client` capabilities already exist in
+`user_capability` (003), and the workforce-outsourcing domain (Sprint
+2.2 — `workforce_contracts`, `placements`, `guarantee_terms`) already
+proves out the "platform as trusted intermediary" legal/product pattern
+for full-time placements guaranteed by a licensed `workforce_partner`
+org. A freelance intermediary environment would apply that same
+trust-intermediary thesis to project-based work instead: a client posts
+a scoped project, freelancers — whose Career DNA and skill evidence are
+already verifiable through the LMS/assessor pipeline — bid or get
+matched, the platform mediates through delivery (and potentially escrow,
+once real payment-gateway work happens — currently deferred to Sprint
+7), and the resulting review feeds back into the freelancer's Trust
+Score the same way `placement_reviews` already does for outsourcing.
+Worth treating as its own domain design rather than a sub-item of Sprint
+4's Jobs line: full-time matching and freelance project mediation have
+materially different trust/dispute/payment shapes — a job match ends in
+an employment contract that exists outside the platform, while a
+freelance project needs the platform itself to mediate delivery,
+payment, and disputes for the entire lifecycle. When this is
+prioritized, the right starting point is reusing the outsourcing
+domain's legal/guarantee patterns, not inventing new ones from scratch.
+
+### 3. تطبيق الموبايل — Mobile App
+
+Everything shipped so far is a responsive Next.js web app with no native
+mobile presence. This starts to matter most once two things are true:
+(a) live sessions are actually seeing regular use — joining a live class
+from a laptop is real friction both instructors and students hit
+immediately — and (b) the agent and platform notifications need to reach
+a user outside an open browser tab (an assessor's quiz approval, a live
+session starting in 10 minutes, a new course invite). There are two
+architecturally distinct paths worth deciding between when this is
+prioritized, and this section exists mainly to name that fork so it
+doesn't have to be rediscovered from scratch later:
+- **A thin wrapper** (e.g. Capacitor, or a PWA install path) reusing the
+  existing Next.js app almost entirely — fastest to ship, weakest at
+  real push notifications and true offline lesson access.
+- **A genuinely native/React Native client** sharing only the Supabase
+  backend and existing API routes — slower to build, but the only real
+  path to reliable push notifications for live-session reminders and
+  true offline course content, which is a real value proposition for the
+  platform's underlying "reach people wherever they're learning" thesis.
+
+No decision is made here — this section only records that the question
+exists.
