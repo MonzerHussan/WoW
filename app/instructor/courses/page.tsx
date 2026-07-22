@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
 import { getMyCourses } from "@/features/instructor/services/instructor-course.service";
+import { getSharedCoursesWithModules } from "@/features/instructor/services/curriculum-contribution.service";
 import { CreateCourseForm } from "@/features/instructor/components/CreateCourseForm";
+import { CurriculumContributionSection } from "@/features/instructor/components/CurriculumContributionSection";
 import { Card } from "@/shared/components/Feedback";
 
 export default async function InstructorCoursesPage() {
@@ -33,11 +35,19 @@ export default async function InstructorCoursesPage() {
     );
   }
 
-  const courses = await getMyCourses(supabase, user.id);
+  const [courses, sharedCourses] = await Promise.all([
+    getMyCourses(supabase, user.id),
+    getSharedCoursesWithModules(supabase),
+  ]);
 
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-3xl mx-auto">
-      <h1 className="font-display font-black text-2xl text-navy mb-6">{t("instructor.myCoursesTitle", lang)}</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display font-black text-2xl text-navy">{t("instructor.myCoursesTitle", lang)}</h1>
+        <Link href="/instructor/review" className="text-sm font-bold text-navy hover:underline">
+          {t("instructor.reviewQueueLink", lang)}
+        </Link>
+      </div>
 
       <div className="flex flex-col gap-4 mb-6">
         {courses.map((course) => (
@@ -52,6 +62,8 @@ export default async function InstructorCoursesPage() {
       </div>
 
       <CreateCourseForm />
+
+      <CurriculumContributionSection courses={sharedCourses} />
     </main>
   );
 }

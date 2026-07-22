@@ -157,9 +157,7 @@ an individual instructor's own course (`owner_type='user'`), which they
 alone own and approve — never routed through `content_review_votes`
 (migration 008's owner + peer_assessor + nova_check governance), because
 there is no *shared* content to govern here. The shared-curriculum
-contribution path itself remains a **separate, not-yet-built** task
-(`content_review_votes` schema exists since 008, no UI consumes it yet —
-see ARCHITECTURE.md §8 / TECH_DEBT.md).
+contribution path itself is now also implemented — see §9 below.
 
 | Event | Feeds | Status |
 |---|---|---|
@@ -186,3 +184,44 @@ published-catalog flow (`getPublishedCourses`, the PMP course page) is
 byte-for-byte unaffected, and a negative-path REST check confirming a
 non-enrolled anonymous caller is rejected (RLS `42501`) when attempting
 to write attendance for a session it has no access to.
+
+## 9. Curriculum contribution to WOW's shared courses (migrations 015a-d) — ✅ implemented and tested
+
+The governed counterpart to §8: a lesson proposed for a *shared* course
+(`owner_type IS NULL`, e.g. the published PMP course) does not become
+visible to students on the instructor's say-so — it must clear
+`content_review_votes`' binding rule, unchanged from how 008 originally
+defined it: any `instructor`/`assessor` capability holder may cast a
+peer vote (`peer_instructor`/`peer_assessor`), but only the platform
+owner's decision (`voter_type='owner'`, requires the `content.manage`
+permission — a narrow role, `content_manager`, not a repurposed
+`admin`) is decisive. Peer votes are recorded and shown as context; they
+never move `review_status` on their own.
+
+| Event | Feeds | Status |
+|---|---|---|
+| instructor proposes a lesson on a shared course | `lessons(review_status='nova_check_pending')` + `content_contributions` | ✅ live, tested |
+| placeholder automated check | `content_review_votes(voter_type='nova_check')`, always auto-approves — **not real review logic yet**, see SECURITY.md | ✅ live (as a placeholder), tested |
+| peer vote (instructor/assessor capability) | `content_review_votes(voter_type='peer_instructor'/'peer_assessor')` — informative only | ✅ live, tested |
+| owner decision (`content.manage`) | `content_review_votes(voter_type='owner')` + `lessons.review_status` → `approved`/`rejected`/`human_review`, decisive regardless of peer votes | ✅ live, tested |
+| approved lesson becomes visible to enrolled students | ordinary `lessons` SELECT, gated on `review_status='approved'` | ✅ live, tested |
+
+**The visibility gate itself was the real work, not the voting UI.**
+Testing this end-to-end surfaced that lesson visibility had never
+actually been gated on `review_status` at all (004's original policy
+predates the concept) — every enrolled student could already see every
+lesson in a course regardless of approval state. Fixed with a
+`RESTRICTIVE` policy in migration 015c (a second permissive policy would
+have had no effect), with an explicit, tested exemption for
+personal-course lessons (§8) so that already-shipped feature stays
+completely unaffected by this one. Full details, including the
+backfill this required for the 18 already-live PMP lessons, are in
+SECURITY.md.
+
+**Acceptance testing performed** (three real accounts — instructor,
+peer voter, and the real platform-owner account holding
+`content.manage`, per TESTING_POLICY.md): full flow end-to-end,
+confirmed via REST with the *student's own JWT* both that the proposal
+was invisible before approval and genuinely visible after it (Module 3
+going from 5 to 6 lessons), plus a regression check confirming all 18
+original PMP lessons remained visible and unchanged throughout.

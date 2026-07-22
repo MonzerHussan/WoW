@@ -77,6 +77,101 @@ migrations that add policies should default to this pattern: it makes a
 migration file safe to re-run to completion from any partial-failure
 state, at zero cost when it was never actually partially applied.
 
+## Curriculum contribution governance (migrations 015a-d)
+
+**Files:** `supabase/migrations/015a_content_manager_role_enum.sql`, `015b_curriculum_contribution_governance.sql`, `015c_curriculum_review_status_gating.sql`, `015d_cleanup_test_lessons.sql`
+
+### `content.manage`: a narrow role, not a repurposed admin
+`content.manage` already existed as a permission (003), already granted
+to `admin`/`super_admin` — but both carry unrelated permissions
+(`users.manage`, `roles.assign`, finance, `audit.read`, etc). The owner
+asked for `content.manage` specifically for their own account, not full
+admin. `015a`/`015b` add a new, single-purpose `content_manager` role
+mapped to *only* `content.manage`. Split into two files because a newly
+added Postgres enum value (`ALTER TYPE ... ADD VALUE`) cannot be
+referenced in the same transaction it was added in (error `55P04`) —
+Supabase's SQL Editor runs a pasted multi-statement file as one implicit
+transaction, so the first combined draft aborted entirely and rolled
+back cleanly (confirmed via a read-only `pg_enum`/`pg_policies`
+diagnostic before writing the split).
+
+### 10 new RLS policies (015b), all additive, all idempotent
+| Table | Policy | Scope |
+|---|---|---|
+| `content_review_votes` | (constraint widened) | `voter_type` now also accepts `peer_instructor`, not just `peer_assessor` (008 only ever wired the assessor case) |
+| `content_review_votes` | `Votes: instructor capability peer-votes` (INSERT) | `voter_type='peer_instructor' AND voter_id=auth.uid() AND` caller holds `instructor` capability |
+| `lessons` | `Lessons: instructor proposes for shared course` (INSERT) | caller holds `instructor` capability AND target course `owner_type IS NULL` AND `review_status` pinned to `nova_check_pending` at insert (can't insert a pre-approved lesson) |
+| `lessons` | `Lessons: content-manage administers` (UPDATE) | `has_permission('content.manage')` — deliberately not scoped to shared courses only; matches `content.manage`'s own documented "Full content administration" scope, and `profiles.role` cannot be self-elevated the way `user_capabilities` can, so this isn't the broad-RLS points mistake repeated |
+| (function) | `run_nova_check_placeholder(uuid)` | security definer — the vote it writes has `voter_id=NULL` (system-attributed), which no RLS policy on `content_review_votes` grants a real user's session; scoped to the lesson's own `last_edited_by = auth.uid()` so it can only ever advance a lesson the caller themselves just submitted |
+
+### Real bug #1 (015c): the `return=representation` false-negative, for real this time
+SECURITY.md's Sprint 3 section already documents this exact failure mode
+as a *diagnostic-curl artifact* (the `skill_evidence` false negative).
+This time it was a genuine bug in real app code: `suggest-lesson/route.ts`
+chains `.insert(...).select(...)`, which requires reading the row back
+immediately after insert — and nothing granted the submitting instructor
+SELECT on their own not-yet-visible pending lesson, so the insert itself
+surfaced as a generic RLS violation. Fixed by 015c's new permissive
+SELECT policy granting the submitter (and reviewers) read access to
+pending shared-course lessons specifically.
+
+### Real bug #2 (015c): pending lessons were visible to every enrolled student
+Found while chasing bug #1, not a re-test of anything: the existing
+`Lessons: enrolled or free preview` policy (004) has zero awareness of
+`review_status` — an enrolled student could already see every lesson in
+a course regardless of approval state. A freshly-proposed, unapproved
+lesson was therefore visible to every enrolled student the instant it
+was submitted, before any review at all — the opposite of the "goes
+through review before students see it" guarantee this feature exists to
+provide.
+
+**Fixed with a `RESTRICTIVE` policy**, not another permissive one — a
+second *permissive* SELECT policy only ever widens access via OR, so a
+stricter one alongside the existing unconditional policy would have had
+zero effect. Only `AS RESTRICTIVE` actually narrows what a permissive
+policy already allows (it ANDs against the OR'd permissive set). The
+restrictive policy requires `review_status='approved'` for ordinary
+visibility, exempting: the submitter, any instructor/assessor/
+content.manage holder, and — critically — every personal-course lesson
+(`owner_type='user'`), which never goes through this workflow at all
+(014 already tested and shipped that feature; it must stay completely
+unaffected).
+
+**This fix required a backfill**, checked before shipping: all 18
+already-live PMP lessons were still sitting at `review_status=
+'nova_check_pending'` (008's column default) — they predate this
+governance workflow entirely, seeded directly via SQL as trusted
+content, never actually run through it. Without backfilling them to
+`'approved'` first, the new restrictive gate would have hidden the
+entire published PMP course from every Beta student. Confirmed via REST
+with a real enrolled student's JWT, before and after: exactly 18 lessons
+visible, unchanged.
+
+### Test-data cleanup (015d) — a real, if minor, incident
+Two rows from my own RLS debugging (`curl` inserts made with
+`Prefer: return=minimal` to isolate the return=representation bug
+above) were never actually deleted — the `DELETE` calls returned `204`
+but matched zero rows, because **no DELETE policy exists on `lessons`
+for anyone** (see below), so they silently no-opped. `015c`'s backfill
+then marked them `review_status='approved'` along with every legitimate
+lesson, making them briefly visible on the real, live, published PMP
+course — the same Supabase project backing production. `015d` deletes
+them by exact id. Caught and fixed before any push to GitHub or Vercel
+redeploy; the same real-account REST verification loop that catches
+everything else in this project caught this too.
+
+### `lessons` has no DELETE policy for anyone — by design, not an oversight
+Content moves through `review_status` (`nova_check_pending` →
+`human_review`/`nova_check_failed` → `approved`/`rejected`); nothing in
+this system ever hard-deletes a lesson row. This is intentional: a
+rejected or superseded proposal stays in `content_review_votes`'
+audit trail via its `lesson_id`, and `content_manage`'s own UPDATE
+policy is scoped to `review_status` transitions, not row removal. If a
+real deletion need ever arises (e.g. GDPR-style erasure), it should go
+through a new, explicitly-scoped policy or security-definer function —
+not a broad DELETE grant — for the same reason `content.manage`'s
+UPDATE policy exists instead of just handing out row ownership.
+
 ## Fixed during this audit
 
 ### 🔴 CRITICAL — Client-controlled point awarding

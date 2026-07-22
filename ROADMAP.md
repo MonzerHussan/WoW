@@ -179,11 +179,12 @@ it on the normal course page and can "join" (opens the link +
 self-reports `joined_at` — **not verified by any meeting provider, by
 design** — see SECURITY.md / DOMAIN_CONTRACTS.md §8 for the caveat).
 
-**Explicitly a separate, still-pending task:** the shared-curriculum
+**Explicitly a separate task at the time:** the shared-curriculum
 contribution path (`content_review_votes` governance, migration 008 —
-owner + peer_assessor + nova_check voting gate) is **not** part of this
-delivery and has not been built. This sprint only covers an individual
-instructor's own, ungoverned personal courses.
+owner + peer_assessor + nova_check voting gate) was **not** part of this
+delivery. This sprint covered only an individual instructor's own,
+ungoverned personal courses. See Sprint 3.3 below — that gap is now
+closed too.
 
 Building the first real owner-driven course UI surfaced a pre-existing,
 never-until-now-exercised RLS gap: `modules`/`lessons` had no
@@ -193,6 +194,60 @@ narrowly-scoped RLS policies across 5 tables — see SECURITY.md. Tested
 end-to-end with two real, separately-signed-up accounts (instructor +
 student) per TESTING_POLICY.md, plus a regression check confirming the
 existing published-catalog flow is unaffected.
+
+## Sprint 3.3 — Instructor System: Curriculum Contribution ✅
+Delivered: `/instructor/courses`' second section ("المساهمة في منهج
+WOW المشترك"), `/instructor/review`, `app/api/instructor/curriculum/
+suggest-lesson`, `app/api/instructor/review/vote`. Closes the gap Sprint
+3.2 explicitly left open: an instructor can now propose a lesson
+(title/body AR+EN, 5 vocabulary pairs, optional toolbox) on a *shared*
+WOW course (`owner_type IS NULL`, e.g. the published PMP course) — but
+unlike a personal course, it does not go live on their say-so. It moves
+through `review_status` (`nova_check_pending` → `human_review` →
+`approved`/`rejected`), governed by `content_review_votes` exactly as
+008 originally specified: any `instructor`/`assessor` capability holder
+can cast an informative peer vote, but only the owner's own decision
+(`voter_type='owner'`, gated by a new narrow `content_manager` role
+mapped to just the `content.manage` permission — not a repurposed
+`admin`) actually flips `review_status`, independent of peer votes.
+
+**Two real bugs found and fixed during testing, not re-tests of
+anything:**
+- The submitting instructor's own API route (`.insert().select()`)
+  failed with a generic RLS error — the exact `return=representation`
+  false-negative pattern SECURITY.md's Sprint 3 section already
+  documents from a *diagnostic curl call*, except this time it was a
+  real bug in real app code (015c).
+- Chasing that surfaced something bigger: lesson visibility had never
+  actually been gated on `review_status` at all — an enrolled student
+  could already see every lesson in a course regardless of approval
+  state, meaning a freshly-proposed lesson would have been visible to
+  students the instant it was submitted. Fixed with a `RESTRICTIVE`
+  policy (015c) — a second permissive policy would have had zero
+  effect — with a backfill for all 18 already-live PMP lessons (still
+  sitting at the review_status column's `nova_check_pending` default,
+  since they predate this workflow entirely) and an explicit exemption
+  for personal-course lessons (Sprint 3.2), so that already-shipped,
+  already-tested feature stays completely unaffected.
+
+Also worth recording: `lessons` has no DELETE policy for anyone, by
+design (content moves through `review_status`, never gets hard-deleted)
+— see SECURITY.md. A minor incident during this sprint's own testing
+(two stray debug rows briefly became visible on the live PMP course
+after the 015c backfill, since a `DELETE` silently no-ops without a
+matching policy) was caught and cleaned up (015d) before anything was
+pushed.
+
+**Acceptance testing performed** (three real accounts — instructor,
+peer voter, and the real platform-owner account holding
+`content.manage`) per TESTING_POLICY.md: full flow end-to-end, verified
+via REST with the student's own JWT both that the pending lesson was
+genuinely invisible before approval and genuinely visible after
+(Module 3: 5 → 6 lessons), plus a regression check confirming all 18
+original PMP lessons stayed visible and unchanged throughout.
+
+**This closes the instructor system trilogy** (Sprint 3.2 + 3.3):
+personal courses, live sessions, and shared-curriculum contribution.
 
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal

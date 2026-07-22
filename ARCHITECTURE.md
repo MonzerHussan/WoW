@@ -192,6 +192,74 @@ UI surfaced a real gap: modules/lessons had no owner-manage RLS policy
 at all, only a published-only SELECT policy. Closed in 014 — see
 SECURITY.md for the exact policies.
 
+## 10. Curriculum contribution to WOW's own shared courses (migrations 015a-d)
+
+A second, deliberately separate path onto the same `lessons` table as
+§9 — but governed, unlike a personal course's ungoverned self-approval.
+An instructor proposes a lesson for a *shared* course
+(`courses.owner_type IS NULL`, e.g. the published PMP course), and it
+only becomes visible to students once WOW's own owner explicitly
+approves it — regardless of how many peers voted for it.
+
+```
+Instructor (capability='instructor') → picks an existing module on a
+shared course → POST /api/instructor/curriculum/suggest-lesson (zod +
+capability + course-ownership check) → lessons row
+(review_status='nova_check_pending') + a content_contributions row →
+run_nova_check_placeholder() RPC (security definer — see below) →
+review_status becomes 'human_review' → appears in /instructor/review
+for anyone with 'instructor'/'assessor' capability (peer votes,
+recorded in content_review_votes as voter_type='peer_instructor'/
+'peer_assessor', purely informative — never touch review_status) →
+the owner's account (role='content_manager', permission
+content.manage — migration 015a/b) casts the one vote that matters
+(voter_type='owner'): review_status → 'approved' or 'rejected',
+independent of any peer vote count → POST /api/instructor/review/vote
+does both the vote insert and the review_status UPDATE, both under the
+owner's own RLS-checked session.
+```
+
+**"Nova check" is a placeholder, not real content review.** The
+automated pre-check step (`run_nova_check_placeholder()`, a security
+definer function) always auto-approves without analyzing anything —
+real automated review logic doesn't exist yet. It exists purely so a
+freshly-proposed lesson advances out of `nova_check_pending` into the
+human review queue. Replace it before trusting this signal for
+anything beyond a demo.
+
+**The review-status visibility gate is the load-bearing part of this
+feature, and it was NOT free** — building this surfaced that the
+existing lesson-visibility policy (004) had zero awareness of
+`review_status` at all: an enrolled student could already see every
+lesson in a course's modules regardless of approval state. A
+newly-proposed, unapproved lesson would therefore have been visible to
+every enrolled student the instant it was submitted — the opposite of
+the intended guarantee. Fixed in 015c with a `RESTRICTIVE` policy
+(narrows the existing permissive one; a second permissive policy would
+have had no effect) requiring `review_status='approved'` for ordinary
+visibility, with explicit exemptions for: the lesson's own submitter,
+any instructor/assessor/content.manage holder (the reviewer audience),
+and — critically — any personal-course lesson (`owner_type='user'`),
+which never goes through this workflow at all and must never be gated
+by review_status. 015c also had to backfill every one of the 18
+already-live PMP lessons to `review_status='approved'`, since all of
+them predate this workflow and were still sitting at the column's
+`nova_check_pending` default — without the backfill, the new gate would
+have hidden the entire published PMP course from every student.
+
+**content.manage is a narrow, single-purpose role** (`content_manager`,
+015a/b), not a repurposed `admin`/`super_admin` — those also carry
+unrelated permissions (`users.manage`, `roles.assign`, finance, etc).
+`profiles.role` cannot be self-elevated the way `user_capabilities` can
+(only an existing admin/super_admin assigns roles, per 003's RBAC
+design), which is what makes a direct `has_permission('content.manage')`
+RLS check on `lessons` UPDATE (015b) an appropriate, proportionate
+design here — not a repeat of the broad-RLS points mistake CLAUDE.md
+already documents once.
+
+See SECURITY.md for the full RLS policy list and the two real
+bugs (not just re-tests) this feature's own testing surfaced.
+
 **Live sessions** (`live_sessions`, `live_session_attendance`, both new
 in 014): a scheduled meeting link, not a Zoom/meeting-provider API
 integration. An instructor schedules a session against their own course
