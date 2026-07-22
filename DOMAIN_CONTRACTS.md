@@ -149,3 +149,40 @@ product, never an ad-hoc promise.
 **Revenue note for Sprint 7:** placement fees and outsourcing margins are
 recorded in `commercial_terms` (jsonb) now; billing rails are built in the
 Subscriptions sprint alongside the other revenue streams.
+
+## 8. Instructor personal courses + live sessions (migration 014) — ✅ implemented and tested
+
+A second, explicitly separate contract from the shared-curriculum path:
+an individual instructor's own course (`owner_type='user'`), which they
+alone own and approve — never routed through `content_review_votes`
+(migration 008's owner + peer_assessor + nova_check governance), because
+there is no *shared* content to govern here. The shared-curriculum
+contribution path itself remains a **separate, not-yet-built** task
+(`content_review_votes` schema exists since 008, no UI consumes it yet —
+see ARCHITECTURE.md §8 / TECH_DEBT.md).
+
+| Event | Feeds | Status |
+|---|---|---|
+| instructor creates a personal course | `courses(owner_type='user', is_published=false)` + a server-generated `invite_code` | ✅ live, tested |
+| instructor adds modules/lessons to their own course | direct RLS-guarded writes, no approval gate — the owner is the sole approver of their own course | ✅ live, tested |
+| student visits `/join/[invite_code]` | `enrollments` upsert for that course | ✅ live, tested |
+| enrolled student views their personal (unpublished) course | `courses`/`modules`/`lessons` resolve via RLS's "enrolled can read" policies, not `is_published` | ✅ live, tested |
+| instructor schedules a live session on their course | `live_sessions` row | ✅ live, tested |
+| enrolled student clicks "join" on an upcoming session | opens `meeting_link` + `live_session_attendance` row (`joined_at`) | ✅ live, tested — **self-reported only, see caveat below** |
+
+**Transparency-relevant caveat (binding, same spirit as T1–T9):**
+`live_session_attendance` is **self-reported by the student**, not
+verified by any meeting provider (no Zoom/meeting API integration this
+sprint). It must never be treated as proof of actual attendance by any
+downstream contract — specifically, it must never feed `skill_evidence`,
+points, or `career_scores`. If real attendance verification is ever
+wired up (a genuine provider integration), it needs its own explicit
+contract entry here, not a silent reuse of this table's semantics.
+
+**Acceptance testing performed** (two real, separately-signed-up
+accounts — an instructor and a student, per TESTING_POLICY.md): full
+flow end-to-end, plus a regression check confirming the existing
+published-catalog flow (`getPublishedCourses`, the PMP course page) is
+byte-for-byte unaffected, and a negative-path REST check confirming a
+non-enrolled anonymous caller is rejected (RLS `42501`) when attempting
+to write attendance for a session it has no access to.

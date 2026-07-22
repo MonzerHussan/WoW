@@ -22,6 +22,61 @@
 **Was:** `004`'s own comment said career score inserts were "system only" but no policy was ever written to permit *any* role to insert — this silently blocked even the self-service auto-quiz-pass path, unrelated to the assessor flow. `system_actors` (used to attribute AI-computed scores/recommendations) has no RLS enabled at all, yet returned empty for every role — a missing base `GRANT SELECT`, not an RLS gap (RLS policies have no effect on a table where RLS was never enabled).
 **Fixed:** `013` adds an owner-only INSERT policy on `career_scores` (covers the auto-pass path only — assessor-confirmed recompute is deliberately deferred, see TECH_DEBT.md #9) and a plain `GRANT SELECT ... TO anon, authenticated` on `system_actors` (public, non-sensitive reference data — same trust level as `skills`/`skill_categories`).
 
+## Instructor personal courses + live sessions (migration 014)
+
+**File:** `supabase/migrations/014_instructor_personal_courses_and_live_sessions.sql`
+
+Building the first real owner-driven course UI (§9 of ARCHITECTURE.md)
+surfaced the same class of pre-existing, never-until-now-exercised gap
+as Sprint 3's RLS findings above: `modules`/`lessons` had no owner-manage
+policy at all — every course shipped before this was seeded directly via
+the SQL Editor (superuser, bypasses RLS), so nothing in the app itself
+had ever actually needed to write to them under a real user's session.
+014 adds 10 new policies across 5 tables, none of them broad:
+
+| Table | Policy | Scope |
+|---|---|---|
+| `courses` | `Courses: invite-code courses are discoverable` (SELECT) | `invite_code is not null` — an unlisted-link pattern, not a broad read; a personal course stays out of the public catalog (`is_published=false`) regardless |
+| `courses` | `Courses: enrolled can read own course` (SELECT) | caller has an `enrollments` row for this course |
+| `modules` | `Modules: user-owner manages own course` (ALL) | course's `owner_type='user' AND owner_id=auth.uid()` |
+| `modules` | `Modules: enrolled can read` (SELECT) | caller has an `enrollments` row for this course |
+| `lessons` | `Lessons: user-owner manages own course` (ALL) | same owner chain, through `modules→courses` |
+| `live_sessions` | `Live sessions: instructor manages own` (ALL) | `instructor_id = auth.uid()` |
+| `live_sessions` | `Live sessions: enrolled students read` (SELECT) | caller has an `enrollments` row for this course |
+| `live_session_attendance` | `Attendance: student marks own join` (INSERT) | `user_id = auth.uid()` AND caller is enrolled in the session's course |
+| `live_session_attendance` | `Attendance: student reads own` (SELECT) | `user_id = auth.uid()` |
+| `live_session_attendance` | `Attendance: instructor reads own session's attendance` (SELECT) | session's `instructor_id = auth.uid()` |
+
+**Why `invite_code` doesn't need to be an authorization gate:** the
+pre-existing `enrollments` self-insert policy (`schema.sql`, unchanged)
+already lets any authenticated user self-enroll into any `course_id`
+they already know, published or not — enrollment was never actually
+gated by publish status. `invite_code` only had to solve *discovery*
+(finding an unpublished course's id at all), not authorization —
+confirmed by a real anon REST test: attempting to insert
+`live_session_attendance` for a session the caller isn't enrolled in is
+correctly rejected (`42501`), independent of whether they know the
+`invite_code`.
+
+**Verified against a real regression risk:** removing
+`course.service.ts`'s redundant `.eq("is_published", true)` filter (now
+relying on RLS alone: "published" OR "enrolled" OR "owner") was tested
+directly — the existing published PMP course still returns identically
+for an anonymous catalog request, and a non-enrolled/non-owner request
+against an unpublished course id still returns zero rows, exactly as
+before.
+
+**New convention this migration introduces:** every `create policy` here
+is preceded by `drop policy if exists` on the same name, and every
+column/table/index add uses `if not exists`. This was adopted after a
+first run of an earlier, non-idempotent draft of this file hit `42710:
+policy already exists` partway through (traced via a read-only
+`information_schema`/`pg_policies` diagnostic to a clean pre-migration
+state — nothing from that draft had actually persisted). Future
+migrations that add policies should default to this pattern: it makes a
+migration file safe to re-run to completion from any partial-failure
+state, at zero cost when it was never actually partially applied.
+
 ## Fixed during this audit
 
 ### 🔴 CRITICAL — Client-controlled point awarding

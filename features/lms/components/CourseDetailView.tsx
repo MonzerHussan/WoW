@@ -2,16 +2,20 @@ import Link from "next/link";
 import { t } from "@/shared/i18n/translations";
 import { Card } from "@/shared/components/Feedback";
 import { CourseDetail } from "@/features/lms/services/course.service";
+import { UpcomingLiveSession } from "@/features/lms/services/live-session.service";
 import { EnrollButton } from "@/features/lms/components/EnrollButton";
+import { LiveSessionsUpcoming } from "@/features/lms/components/LiveSessionsUpcoming";
 
 export function CourseDetailView({
   course,
   userId,
   lang = "ar" as const,
+  liveSessions = [],
 }: {
   course: CourseDetail;
   userId: string | null;
   lang?: "ar" | "en";
+  liveSessions?: UpcomingLiveSession[];
 }) {
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +67,10 @@ export function CourseDetailView({
           </Card>
         ))}
       </div>
+
+      {course.isEnrolled && userId && liveSessions.length > 0 && (
+        <LiveSessionsUpcoming sessions={liveSessions} userId={userId} />
+      )}
 
       {course.courseQuizzes.length > 0 && course.isEnrolled && (
         <Card className="p-5">

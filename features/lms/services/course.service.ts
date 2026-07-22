@@ -53,6 +53,14 @@ export async function getPublishedCourses(supabase: SupabaseClient): Promise<Cou
  * by RLS ("Lessons: enrolled or free preview") — a non-enrolled guest only
  * ever receives free-preview rows, so there is no separate client-side
  * "locked" flag to compute here.
+ *
+ * No `.eq("is_published", true)` filter here (Sprint 4/instructor
+ * change) — RLS alone now decides visibility: "Courses: published are
+ * public" still covers the catalog case exactly as before, and "Courses:
+ * enrolled can read own course" (014) additionally lets a student who
+ * joined a personal/unpublished course via invite link reach its page. A
+ * guest or non-enrolled user hitting an unpublished id still gets zero
+ * rows, unchanged from before.
  */
 export async function getCourseDetail(
   supabase: SupabaseClient,
@@ -63,7 +71,6 @@ export async function getCourseDetail(
     .from("courses")
     .select("id, title, summary, cover_url, language, track")
     .eq("id", courseId)
-    .eq("is_published", true)
     .maybeSingle();
 
   if (courseError) throw new Error(courseError.message);

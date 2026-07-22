@@ -163,6 +163,37 @@ completion, agent uptime) before any capacity investment (Redis,
 Supabase upgrade) — measure real usage first, same philosophy as
 deferring Subscriptions until there's a reason to build them.
 
+## Sprint 3.2 — Instructor System: Personal Courses + Live Sessions ✅
+Delivered: `features/instructor/` (new), `app/instructor/courses/*`,
+`app/join/[code]`, `app/api/instructor/courses`. An instructor
+(capability self-activated from `/profile`, same as any other
+capability) creates a personal course (`owner_type='user',
+is_published=false` — never enters the public catalog), adds
+modules/lessons to it freely (no `content_review_votes` approval gate —
+they're the sole owner and approver of their own course, unlike the
+shared-curriculum path), and shares a generated `/join/[invite_code]`
+link that auto-enrolls a student. Live sessions
+(`live_sessions`/`live_session_attendance`, migration 014): instructor
+schedules a meeting-link session on their course; enrolled students see
+it on the normal course page and can "join" (opens the link +
+self-reports `joined_at` — **not verified by any meeting provider, by
+design** — see SECURITY.md / DOMAIN_CONTRACTS.md §8 for the caveat).
+
+**Explicitly a separate, still-pending task:** the shared-curriculum
+contribution path (`content_review_votes` governance, migration 008 —
+owner + peer_assessor + nova_check voting gate) is **not** part of this
+delivery and has not been built. This sprint only covers an individual
+instructor's own, ungoverned personal courses.
+
+Building the first real owner-driven course UI surfaced a pre-existing,
+never-until-now-exercised RLS gap: `modules`/`lessons` had no
+owner-manage policy at all (every course shipped before this was seeded
+directly via the SQL Editor, bypassing RLS). Closed via 10 new,
+narrowly-scoped RLS policies across 5 tables — see SECURITY.md. Tested
+end-to-end with two real, separately-signed-up accounts (instructor +
+student) per TESTING_POLICY.md, plus a regression check confirming the
+existing published-catalog flow is unaffected.
+
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal
 ## Sprint 6 — Gamification (expand beyond current points/level/badges)

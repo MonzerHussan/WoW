@@ -158,3 +158,54 @@ why a broader policy was deliberately rejected for points.
 - Payments/subscriptions, and `spend_coins()` wired to the agent (Sprint 7).
 - Any caching layer, background jobs, or queues.
 - Automated tests of any kind (Sprint 10).
+
+## 9. Instructor personal courses + live sessions (migration 014)
+
+A second, deliberately separate path onto the LMS tables, alongside the
+shared-curriculum path (§8's `content_review_votes` governance, still
+unbuilt): an individual instructor's own course, which they alone own
+and approve — no peer/assessor/nova_check voting gate, because there is
+no "shared" content to govern.
+
+```
+Instructor (capability='instructor', self-activated from /profile
+like any other capability) → POST /api/instructor/courses (zod +
+capability check, server-generates a unique invite_code) → courses row
+(owner_type='user', owner_id=instructor, is_published=false — never
+enters the public catalog) → instructor freely adds modules/lessons via
+direct RLS-guarded inserts (features/instructor/, no API route needed —
+ownership is enforced by RLS itself, not application code) → instructor
+shares /join/[invite_code] → student visits it (auth required) →
+course resolved by invite_code (its only discovery path — plain
+knowledge of the course's RLS-permitted the same as the invite code) →
+enrollments upsert (RLS already allowed self-enrollment in any course id
+pre-014; invite_code only solves discovery, not authorization) →
+redirect to the normal /courses/[id] page, now reachable for this
+student because it's their own enrollment, not because it's published.
+```
+
+**Ownership model:** reuses `courses.owner_type`/`owner_id`, which
+already existed (004) but had never actually been exercised by the app
+— every course shipped before this was seeded directly via the SQL
+Editor (superuser, bypasses RLS). Building the first real owner-driven
+UI surfaced a real gap: modules/lessons had no owner-manage RLS policy
+at all, only a published-only SELECT policy. Closed in 014 — see
+SECURITY.md for the exact policies.
+
+**Live sessions** (`live_sessions`, `live_session_attendance`, both new
+in 014): a scheduled meeting link, not a Zoom/meeting-provider API
+integration. An instructor schedules a session against their own course
+(`instructor_id = auth.uid()`, RLS-enforced); enrolled students see
+upcoming sessions on the normal course page and click "join," which
+opens the link in a new tab and self-reports `joined_at`.
+**Attendance here is self-reported, not verified by any meeting
+provider** — a student can click "joined" without actually attending.
+This is a known, deliberate design limitation (no Zoom API integration
+this sprint), not a bug. `live_session_attendance` must never be treated
+as proof of real attendance by anything downstream (skill_evidence,
+points, employability) for exactly this reason.
+
+**Scope:** deliberately limited to `owner_type='user'` (individual
+instructors). Organization-owned course management (`owner_type=
+'organization'`) has the same latent modules/lessons RLS gap but was
+out of scope for this pass — not touched.
