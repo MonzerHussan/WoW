@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/shared/hooks/useLang";
 import { LangToggle } from "@/shared/components/LangToggle";
+import { Logo } from "@/shared/components/Logo";
 import { LandingHero } from "./LandingHero";
 import {
   JOURNEY_CARDS,
@@ -10,7 +11,30 @@ import {
   LANDING_STATS,
   COMPANY_STEPS,
   PANEL_CANDIDATES,
+  TRENDING_TOPICS,
+  FEED_POSTS,
+  SUGGESTED_MENTORS,
 } from "@/features/landing/constants";
+
+/**
+ * Phase-1 visual mockup (ROADMAP.md's phased rollout) — local-only
+ * toggle, never writes anywhere. Real follow functionality is a later,
+ * separately-gated phase.
+ */
+function FollowButton({ label, followingLabel }: { label: string; followingLabel: string }) {
+  const [following, setFollowing] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => setFollowing((v) => !v)}
+      className={`mt-3 w-full rounded-full px-4 py-2 text-[13px] font-bold font-display border-[1.5px] transition ${
+        following ? "bg-navy border-navy text-white" : "border-line text-navy hover:border-navy/40"
+      }`}
+    >
+      {following ? followingLabel : label}
+    </button>
+  );
+}
 
 function Eyebrow({ children, onDark = false }: { children: React.ReactNode; onDark?: boolean }) {
   return (
@@ -56,12 +80,7 @@ export function LandingPage() {
       {/* ===== NAV ===== */}
       <header className="sticky top-0 z-50 bg-bg/90 backdrop-blur-md border-b border-line">
         <nav className="flex items-center justify-between px-7 py-4 max-w-[1180px] mx-auto gap-4">
-          <a href="/" className="flex items-center gap-2.5 font-display font-black text-[22px] text-navy whitespace-nowrap">
-            <span className="inline-flex items-center justify-center w-[26px] h-[26px] rounded-full text-white text-[13px] bg-[conic-gradient(from_180deg,#0B1E4D,#F2841C,#6D28D9)]">
-              و
-            </span>
-            WOW <span className="font-medium text-[13px] text-ink-soft">{t("landing.tagline")}</span>
-          </a>
+          <Logo />
           <div className="hidden md:flex gap-6 font-semibold text-[14.5px] text-ink-soft">
             <a className="hover:text-navy transition" href="#journey">{t("landing.navJourney")}</a>
             <a className="hover:text-navy transition" href="#audiences">{t("landing.navAudiences")}</a>
@@ -85,6 +104,66 @@ export function LandingPage() {
 
       {/* ===== HERO ===== */}
       <LandingHero lang={lang} />
+
+      {/* ===== TRENDING + SPONSOR (Phase-1 visual mockup — static, no backend) ===== */}
+      <section className="pb-[70px]">
+        <Wrap>
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-stretch">
+            <div className="bg-white border border-line rounded-wow p-6">
+              <div className="font-display font-bold text-[11px] uppercase tracking-[1.1px] text-ink-soft mb-4">
+                {t("landing.trendingEyebrow")}
+              </div>
+              <ol className="flex flex-col gap-3.5">
+                {TRENDING_TOPICS.map((key, i) => (
+                  <li key={key} className="flex gap-3 items-baseline">
+                    <span className="font-display font-black text-orange text-[13px] flex-none">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="text-[13.5px] font-semibold text-navy leading-snug">{t(key)}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_220px] gap-6">
+              <div className="bg-navy rounded-wow p-7 md:p-9 text-white flex flex-col justify-center">
+                <div className="font-display font-bold text-[11px] uppercase tracking-[1.1px] text-[#FFB877] mb-3">
+                  {t("landing.sponsorEyebrow")}
+                </div>
+                <h3 className="font-display font-black text-2xl md:text-[28px] mb-3">{t("landing.sponsorTitle")}</h3>
+                <p className="text-[#C4CCE8] text-[14.5px] max-w-[440px] mb-6">{t("landing.sponsorBody")}</p>
+                <a
+                  href="/courses/8986e80e-4f85-48d5-9abe-e7669b3bb1cb"
+                  className="inline-block w-fit bg-gradient-to-br from-orange to-orange-dark text-white px-6 py-3 rounded-full font-bold text-sm shadow-lg shadow-orange-dark/25 hover:-translate-y-0.5 transition"
+                >
+                  {t("landing.sponsorCta")}
+                </a>
+              </div>
+
+              <div className="bg-white border-2 border-orange rounded-wow p-6 flex flex-col justify-center text-center">
+                <div className="font-display font-black text-navy text-[38px] leading-none tracking-tight">
+                  {t("landing.outcomeStatPlaceholder")}
+                </div>
+                <p className="text-ink-soft text-[12.5px] mt-3 leading-snug">{t("landing.outcomeStatShortCaption")}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ===== ADVERTISE ON WOW (reserved ad space — visual only, no functional link) ===== */}
+          <div className="mt-6 border-2 border-dashed border-line rounded-wow p-7 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-start">
+            <div>
+              <h4 className="font-display font-black text-navy text-lg mb-1">{t("landing.advertiseTitle")}</h4>
+              <p className="text-ink-soft text-[13.5px]">{t("landing.advertiseSub")}</p>
+            </div>
+            <button
+              type="button"
+              className="flex-none border-[1.5px] border-navy text-navy px-6 py-3 rounded-full font-bold text-sm hover:bg-navy hover:text-white transition"
+            >
+              {t("landing.advertiseCta")}
+            </button>
+          </div>
+        </Wrap>
+      </section>
 
       {/* ===== JOURNEY ===== */}
       <section id="journey" className="py-[90px]">
@@ -170,6 +249,66 @@ export function LandingPage() {
         </Wrap>
       </section>
 
+      {/* ===== FEED (Phase-1 visual mockup — static posts, no backend) ===== */}
+      <section className="pb-[90px]">
+        <Wrap>
+          <div className="max-w-[640px] mb-10">
+            <Eyebrow>{t("landing.feedEyebrow")}</Eyebrow>
+            <h2 className="font-display font-black text-navy text-[33px] leading-[1.3]">{t("landing.feedTitle")}</h2>
+          </div>
+          <div className="flex flex-col gap-5 max-w-[720px]">
+            {FEED_POSTS.map((post) => (
+              <div key={post.titleKey} className="bg-white border border-line rounded-wow p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 flex-none rounded-full bg-navy text-white flex items-center justify-center font-display font-bold text-sm">
+                    {t(post.authorKey).trim().charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-[14.5px] text-navy truncate">{t(post.authorKey)}</div>
+                    <div className="text-xs text-ink-soft truncate">
+                      {t(post.roleKey)} · {t(post.timeKey)}
+                    </div>
+                  </div>
+                  <span className="ms-auto flex-none font-display font-bold text-[11px] uppercase tracking-wide text-orange-dark bg-orange/10 px-2.5 py-1 rounded-full">
+                    {t(post.tagKey)}
+                  </span>
+                </div>
+                <h4 className="font-display font-extrabold text-navy text-[16.5px] mb-2 leading-snug">
+                  {t(post.titleKey)}
+                </h4>
+                <p className="text-[13.5px] text-ink-soft leading-relaxed">{t(post.bodyKey)}</p>
+                <div className="flex gap-5 text-ink-soft text-[13px] mt-4 pt-4 border-t border-line">
+                  <span>❤️ {post.likes.toLocaleString("en-US")}</span>
+                  <span>💬 {post.comments.toLocaleString("en-US")}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Wrap>
+      </section>
+
+      {/* ===== SUGGESTED MENTORS (Phase-1 visual mockup — Follow is a local-only toggle) ===== */}
+      <section className="pb-[90px]">
+        <Wrap>
+          <div className="max-w-[640px] mb-10">
+            <Eyebrow>{t("landing.mentorsEyebrow")}</Eyebrow>
+            <h2 className="font-display font-black text-navy text-[33px] leading-[1.3]">{t("landing.mentorsTitle")}</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {SUGGESTED_MENTORS.map((mentor) => (
+              <div key={mentor.id} className="bg-white border border-line rounded-wow p-6 text-center">
+                <div className="w-14 h-14 mx-auto rounded-full bg-[conic-gradient(from_180deg,#0B1E4D,#F2841C,#6D28D9)] text-white flex items-center justify-center font-display font-bold text-lg mb-3">
+                  {t(mentor.nameKey).trim().charAt(0)}
+                </div>
+                <div className="font-bold text-navy text-[15px]">{t(mentor.nameKey)}</div>
+                <div className="text-xs text-ink-soft mt-1">{t(mentor.fieldKey)}</div>
+                <FollowButton label={t("landing.followCta")} followingLabel={t("landing.followingCta")} />
+              </div>
+            ))}
+          </div>
+        </Wrap>
+      </section>
+
       {/* ===== COMPANIES ===== */}
       <section id="companies" className="pb-[90px]">
         <Wrap className="grid grid-cols-1 md:grid-cols-2 gap-14 items-center">
@@ -236,16 +375,35 @@ export function LandingPage() {
         </Wrap>
       </section>
 
+      {/* ===== CLOSING (full-bleed dark, static — Phase-1 visual mockup) ===== */}
+      <section className="bg-navy py-20 px-7 text-center text-white">
+        <h2
+          className={`font-display font-black text-[34px] md:text-[48px] leading-[1.2] max-w-[720px] mx-auto ${
+            lang === "en" ? "italic" : ""
+          }`}
+        >
+          {lang === "ar" ? (
+            <>
+              رحلتك المهنية <span className="text-orange">قصة تُروى</span>
+            </>
+          ) : (
+            t("landing.closingTitle")
+          )}
+        </h2>
+        <p className="text-[#C4CCE8] max-w-[520px] mx-auto mt-5 mb-8 text-[15.5px]">{t("landing.closingSub")}</p>
+        <a
+          href="/signup"
+          className="inline-block bg-gradient-to-br from-orange to-orange-dark text-white px-9 py-4 rounded-full font-bold text-[15px] shadow-lg shadow-orange-dark/25 hover:-translate-y-0.5 transition"
+        >
+          {t("landing.closingCta")}
+        </a>
+      </section>
+
       {/* ===== FOOTER ===== */}
       <footer className="pb-8">
         <Wrap>
           <div className="flex justify-between flex-wrap gap-6 border-t border-line pt-7">
-            <div className="flex items-center gap-2 font-display font-black text-lg text-navy">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] bg-[conic-gradient(from_180deg,#0B1E4D,#F2841C,#6D28D9)]">
-                و
-              </span>
-              WOW <span className="font-medium text-[13px] text-ink-soft">{t("landing.tagline")}</span>
-            </div>
+            <Logo className="h-7" />
             <div className="flex gap-6 text-[13.5px] text-ink-soft flex-wrap">
               <a className="hover:text-navy transition" href="#journey">{t("landing.navJourney")}</a>
               <a className="hover:text-navy transition" href="#audiences">{t("landing.navAudiences")}</a>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
+import { Logo } from "@/shared/components/Logo";
 import { getCourseDetail } from "@/features/lms/services/course.service";
 import { getUpcomingLiveSessions } from "@/features/lms/services/live-session.service";
 import { CourseDetailView } from "@/features/lms/components/CourseDetailView";
@@ -22,6 +23,7 @@ export default async function CoursePage({ params }: { params: { id: string } })
 
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-4xl mx-auto">
+      <Logo className="h-8 mb-6" />
       <Link href="/courses" className="text-sm text-ink-soft hover:text-navy mb-6 inline-block">
         ← {t("lms.backToCatalog", lang)}
       </Link>

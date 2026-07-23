@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
+import { Logo } from "@/shared/components/Logo";
 import { getMyCourses } from "@/features/instructor/services/instructor-course.service";
 import { getSharedCoursesWithModules } from "@/features/instructor/services/curriculum-contribution.service";
 import { CreateCourseForm } from "@/features/instructor/components/CreateCourseForm";
@@ -27,6 +28,7 @@ export default async function InstructorCoursesPage() {
   if (!capability) {
     return (
       <main dir="rtl" className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center">
+        <Logo className="h-8" />
         <p className="text-ink-soft">{t("instructor.instructorOnly", lang)}</p>
         <Link href="/profile" className="text-navy font-bold hover:underline">
           {t("instructor.goActivate", lang)}
@@ -42,6 +44,7 @@ export default async function InstructorCoursesPage() {
 
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-3xl mx-auto">
+      <Logo className="h-8 mb-6" />
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display font-black text-2xl text-navy">{t("instructor.myCoursesTitle", lang)}</h1>
         <Link href="/instructor/review" className="text-sm font-bold text-navy hover:underline">

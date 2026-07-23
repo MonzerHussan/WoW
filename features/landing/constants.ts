@@ -140,3 +140,61 @@ export const PANEL_CANDIDATES: {
   { nameKey: "landing.cand2Name", infoKey: "landing.cand2", matchKey: "landing.match2" },
   { nameKey: "landing.cand3Name", infoKey: "landing.cand3", matchKey: "landing.match3" },
 ];
+
+// Phase-1 visual mockup only (see ROADMAP.md's phased rollout plan) —
+// static placeholder content, no backing table, no real posting/follow
+// logic. Real functionality lands in later, separately-gated phases.
+export const TRENDING_TOPICS: TranslationKey[] = [
+  "landing.trend1",
+  "landing.trend2",
+  "landing.trend3",
+  "landing.trend4",
+];
+
+export const FEED_POSTS: {
+  authorKey: TranslationKey;
+  roleKey: TranslationKey;
+  timeKey: TranslationKey;
+  tagKey: TranslationKey;
+  titleKey: TranslationKey;
+  bodyKey: TranslationKey;
+  likes: number;
+  comments: number;
+}[] = [
+  {
+    authorKey: "landing.feedPost1Author",
+    roleKey: "landing.feedPost1Role",
+    timeKey: "landing.feedPost1Time",
+    tagKey: "landing.feedPost1Tag",
+    titleKey: "landing.feedPost1Title",
+    bodyKey: "landing.feedPost1Body",
+    likes: 1200,
+    comments: 84,
+  },
+  {
+    authorKey: "landing.feedPost2Author",
+    roleKey: "landing.feedPost2Role",
+    timeKey: "landing.feedPost2Time",
+    tagKey: "landing.feedPost2Tag",
+    titleKey: "landing.feedPost2Title",
+    bodyKey: "landing.feedPost2Body",
+    likes: 842,
+    comments: 61,
+  },
+  {
+    authorKey: "landing.feedPost3Author",
+    roleKey: "landing.feedPost3Role",
+    timeKey: "landing.feedPost3Time",
+    tagKey: "landing.feedPost3Tag",
+    titleKey: "landing.feedPost3Title",
+    bodyKey: "landing.feedPost3Body",
+    likes: 413,
+    comments: 129,
+  },
+];
+
+export const SUGGESTED_MENTORS: { id: string; nameKey: TranslationKey; fieldKey: TranslationKey }[] = [
+  { id: "mentor1", nameKey: "landing.mentor1Name", fieldKey: "landing.mentor1Field" },
+  { id: "mentor2", nameKey: "landing.mentor2Name", fieldKey: "landing.mentor2Field" },
+  { id: "mentor3", nameKey: "landing.mentor3Name", fieldKey: "landing.mentor3Field" },
+];

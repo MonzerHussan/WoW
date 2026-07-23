@@ -6,6 +6,32 @@ import { t, TranslationKey } from "@/shared/i18n/translations";
 import { getAccountTypeLabel } from "@/shared/constants/account-types";
 import { LANDING_PERSONAS, LandingStage } from "@/features/landing/constants";
 
+/**
+ * Editorial two-weight headline treatment: splits on the natural AR
+ * comma / EN em-dash break each persona title already uses where
+ * present, rendering the lead clause in font-black and the rest in a
+ * lighter font-normal for stronger typographic contrast (same Tajawal
+ * family, two clearly different weights). Falls back to a single
+ * font-black run for any title without that break — still correct,
+ * just without the extra contrast.
+ */
+function EditorialHeadline({ text }: { text: string }) {
+  for (const delimiter of ["، ", " — "]) {
+    const idx = text.indexOf(delimiter);
+    if (idx > -1) {
+      const lead = text.slice(0, idx + delimiter.length);
+      const rest = text.slice(idx + delimiter.length);
+      return (
+        <>
+          <span className="font-black">{lead}</span>
+          <span className="font-normal">{rest}</span>
+        </>
+      );
+    }
+  }
+  return <span className="font-black">{text}</span>;
+}
+
 const RING_STAGES: {
   stage: LandingStage;
   num: string;
@@ -51,8 +77,8 @@ export function LandingHero({ lang }: { lang: Lang }) {
             {t("landing.heroEyebrow", lang)}
           </div>
 
-          <h1 className="font-display font-black text-navy text-3xl md:text-[50px] leading-[1.18] tracking-tight">
-            {t(persona.titleKey, lang)}
+          <h1 className="font-display text-navy text-3xl md:text-[50px] leading-[1.18] tracking-tight">
+            <EditorialHeadline text={t(persona.titleKey, lang)} />
           </h1>
           <p className="text-ink-soft text-[17px] max-w-[520px] mt-5 leading-relaxed">{t(persona.subKey, lang)}</p>
 

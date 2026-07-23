@@ -5,6 +5,7 @@ import { supabaseServer } from "@/shared/lib/supabase/server";
 import { getAccountTypeLabel } from "@/shared/constants/account-types";
 import { t } from "@/shared/i18n/translations";
 import LogoutButton from "@/shared/components/LogoutButton";
+import { Logo } from "@/shared/components/Logo";
 import { PointsCard } from "./PointsCard";
 import { BadgesList } from "./BadgesList";
 
@@ -48,9 +49,9 @@ export async function DashboardView({ assistantSlot }: { assistantSlot?: ReactNo
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-5xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <div>
-          <span className="font-display font-black text-navy text-lg">WOW</span>
-          <span className="text-ink-soft text-sm"> | {t("dashboard.title", lang)}</span>
+        <div className="flex items-center gap-2.5">
+          <Logo className="h-8" />
+          <span className="text-ink-soft text-sm">| {t("dashboard.title", lang)}</span>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/courses" className="text-sm font-bold text-ink-soft hover:text-navy">

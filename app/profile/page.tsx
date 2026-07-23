@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { Logo } from "@/shared/components/Logo";
 import { getProfileOverview } from "@/features/profile/services/profile.service";
 import { ProfileView } from "@/features/profile/components/ProfileView";
 
@@ -15,6 +16,7 @@ export default async function ProfilePage() {
 
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-4xl mx-auto">
+      <Logo className="h-8 mb-6" />
       <ProfileView userId={user.id} overview={overview} lang="ar" />
     </main>
   );
