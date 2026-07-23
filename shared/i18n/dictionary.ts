@@ -221,6 +221,11 @@ export const dictionary = {
       ar: "من خريجي WOW يدخلون مجالهم المستهدف خلال 6 أشهر — نُحدّث هذا الرقم بمجرد توفر بيانات كافية من Beta، لا قبل ذلك.",
       en: "of WOW graduates land their target field within 6 months — we'll publish a real number once Beta gives us enough data, not before.",
     },
+    newsroomBadge: { ar: "غرفة أخبار حيّة", en: "LIVE NEWSROOM" },
+    newsroomDesc: {
+      ar: "منصة تحريرية لعالم العمل ومجتمع مفتوح — انشر، تعلّم، واحصل على فرصتك.",
+      en: "An editorial career platform + open community. Publish, learn, and get hired.",
+    },
     trendingEyebrow: { ar: "الأخبار المتداولة", en: "Trending Topics" },
     trend1: { ar: "مستقبل الذكاء الاصطناعي في سوق العمل بالمنطقة", en: "The Future of AI in the Region's Job Market" },
     trend2: { ar: "المنح الدراسية المتاحة لعام 2026", en: "Scholarships Open for 2026" },
