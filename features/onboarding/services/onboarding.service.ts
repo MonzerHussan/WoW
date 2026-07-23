@@ -34,6 +34,8 @@ export async function completeOnboarding(
       account_type: accountType,
       onboarding_goal: input.goal,
       pmp_level_interest: input.pmpLevel,
+      age: input.age,
+      gender: input.gender,
       onboarding_completed: true,
     })
     .eq("id", user.id);

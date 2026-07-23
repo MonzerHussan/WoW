@@ -38,6 +38,12 @@ export const GOALS: Record<AccountType, { value: string; ar: string; en: string 
   ],
 };
 
+export const GENDERS: { value: "male" | "female" | "prefer_not_to_say"; ar: string; en: string }[] = [
+  { value: "male", ar: "ذكر", en: "Male" },
+  { value: "female", ar: "أنثى", en: "Female" },
+  { value: "prefer_not_to_say", ar: "أفضل عدم القول", en: "Prefer not to say" },
+];
+
 export const PMP_LEVELS = [
   { value: 1, ar: "المستوى 1 — أساسيات إدارة المشاريع", en: "Level 1 — PM Foundations" },
   { value: 2, ar: "المستوى 2 — PMP Practitioner", en: "Level 2 — PMP Practitioner" },

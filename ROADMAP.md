@@ -249,6 +249,73 @@ original PMP lessons stayed visible and unchanged throughout.
 **This closes the instructor system trilogy** (Sprint 3.2 + 3.3):
 personal courses, live sessions, and shared-curriculum contribution.
 
+## Sprint 3.4 — Agent Catalog Grounding + Coin Wallet Activation (in progress)
+Triggered by a real user-reported quality bug, not a planned feature:
+asking the agent (chosen name "المرشد" on the reporting account) "كيف
+أسجل بالدورة؟" got a generic Udemy/Coursera/LinkedIn Learning answer —
+a direct violation of the "recommend only real WOW content" guardrail,
+because nothing had actually broken that guardrail's *enforcement*: the
+context-fetching `Promise.all` in `app/api/agent/route.ts` never
+queried course/enrollment data at all, so the model had zero signal
+WOW even has real courses and fell back entirely to its own training
+knowledge.
+
+**Task 1 (done, tested)**: catalog grounding. Added
+`getEnrollmentContext()` (`features/agent/services/agent.service.ts`),
+reused `getPublishedCourses()` from `features/lms/` (imported at the
+`app/` composition layer, not into `features/agent/`, per the
+import-direction rule), and a new `buildCatalogContextBlock()`
+(`features/agent/prompt.ts`) injected into the system prompt — plus an
+explicit guardrail forbidding external-platform course mentions and
+requiring any `complete_course` recommendation to carry a real
+`course_id` from that block. See ARCHITECTURE.md §4. Tested locally via
+a direct authenticated call to `/api/agent` with the exact repro
+message: the agent now names the real PMP course and links to its real
+`/courses/{id}`, with no external platform mentioned.
+
+**Profile expansion + deeper agent grounding (done, tested)**: a
+separate, larger follow-on request, sized up-front before starting
+(per the same discipline used for the earlier language-toggle
+investigation) into six parts (أ-و); two were approved for this
+session:
+- **(أ) `profiles.age`/`gender`** (migration 016): a new onboarding
+  step (5 steps now, was 4) collects both — `age` mandatory in the UI,
+  both columns nullable at the DB level since `handle_new_user()`
+  creates the row before onboarding runs. Flagged as tech debt
+  (TECH_DEBT.md #11): a static integer freezes and never advances —
+  `date_of_birth` is the real fix, deferred deliberately for now.
+- **(ب) deeper agent grounding**: the agent's DNA context now also
+  carries age, gender, and "reason for joining"
+  (`profiles.onboarding_goal`, already existed, was just never wired
+  in), plus **inferred** strengths/gaps from the caller's own
+  `entity_skills` (no new free-text field — T2 forbids a score/claim
+  without evidence). See ARCHITECTURE.md §4 for the exact mechanism
+  and SECURITY.md for why no new RLS was needed. Verified with the
+  *actual logged system prompt* sent to OpenAI for two real accounts,
+  not just a code read — including the model's own reply switching to
+  correct Arabic feminine grammar unprompted once `gender` entered its
+  context.
+- DOMAIN_CONTRACTS.md §10 (new): the "no official language-level
+  equivalence" disclosure rule, added ahead of (ج)/(د)/(هـ) below so
+  it exists before any UI references a language level.
+- (ج) coin-wallet-backed language opt-in and (د) TTS listening remain
+  separate future sessions; (هـ) grammar content remains blocked on
+  the owner authoring the 18 PMP Level 1 grammar points; (و) needed no
+  change.
+
+**Task 2 (next)**: activate the coin wallet generally (not
+voice-specific) — real balance display on `/profile`, UI for the 3
+existing `coin_packages`, and a locally-simulated purchase flow
+(explicitly documented as temporary, no real payment gateway yet) that
+actually credits coins for testing, via a new security-definer
+function following the `spend_coins()` (007b) pattern — never trusting
+a client-supplied coin amount.
+
+**Task 3 (deferred to its own future session, by explicit product
+decision)**: real-time voice chat via the OpenAI Realtime API, on the
+same DNA+catalog grounding as Task 1, with per-minute `spend_coins()`
+billing and a documented prompt-caching cost warning.
+
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal
 ## Sprint 6 — Gamification (expand beyond current points/level/badges)

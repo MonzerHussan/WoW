@@ -17,7 +17,7 @@ avoid legal complexity by design, not by disclaimer.**
 | T1 | The user sees 100% of their own Career DNA — every axis, every score, every recommendation. | RLS owner policies (004) |
 | T2 | Every computed score ships with a human-readable explanation of its factors and how to improve them. A score without an explanation cannot exist. | `career_scores.explanation NOT NULL` (004) |
 | T3 | Organizations see **nothing** of a user's DNA beyond the public profile unless the user grants that specific org a scope (`scores` / `skills` / `full_dna`). Consent is per-organization, revocable anytime. | `career_consents` table (004) + server-side checks |
-| T4 | **Personality data is never shareable with organizations. Ever.** It is excluded from every consent scope by schema design. | `career_consents.scope` check constraint has no personality option |
+| T4 | **Personality data is never shareable with organizations. Ever.** It is excluded from every consent scope by schema design. (Not the same guarantee as `profiles.age` — see §11, still an open policy question, not decided.) | `career_consents.scope` check constraint has no personality option |
 | T5 | Personality science: Big Five is the primary instrument. DISC/MBTI are optional self-insight enrichment and MUST NOT feed scores, matching, or employer-visible outputs. | Contract rule; enforced in scoring code review |
 | T6 | Every AI-generated recommendation is attributed to a `system_actor`, stored, and measurable. The agent's success metric is its acted-on rate. **Note (Sprint 3):** the `system_actors` row is still named `'nova'` internally (an audit-trail label, never shown to users) — the user-facing name is whatever they chose in `user_agent_profiles.chosen_name`. These are deliberately decoupled: one user's agent identity, one fixed internal attribution key. | `career_recommendations` (004) |
 | T7 | Automated scores influence *suggestions*, never automated rejections. Any employer-facing ranking derived from scores requires the T3 consent and must show the user it happened. | Contract rule for the Jobs sprint |
@@ -225,3 +225,26 @@ confirmed via REST with the *student's own JWT* both that the proposal
 was invisible before approval and genuinely visible after it (Module 3
 going from 5 to 6 lessons), plus a regression check confirming all 18
 original PMP lessons remained visible and unchanged throughout.
+
+## 10. قاعدة عدم الادّعاء بمعادلة لغوية رسمية
+
+أي تتبّع لمستوى اللغة الإنجليزية (CEFR أو WOW Readiness Index
+الداخلي) هو تقدير داخلي فقط، ولا يُعرض أبداً كمعادل رسمي لاختبارات
+معتمدة دولياً مثل IELTS أو TOEFL. أي نص واجهة يذكر مستوى لغوي يجب أن
+يتضمن إفصاحاً صريحاً بهذا. هذا يحمي المنصة من مسؤولية قانونية عن
+ادّعاء اعتماد لا نملكه.
+
+## 11. وضع حقل العمر بالنسبة لنطاقات الموافقة (وصفي، غير نهائي)
+
+الحقل `age` (`profiles`, migration 016) لا يصل اليوم لأي منظمة، لكن
+هذا ناتج حالياً عن أن **لا مسار موافقة يصل لـ`profiles` أصلاً بعد** —
+`career_consents.scope` يحكم `career_profiles`/`career_scores` فقط، لا
+`profiles`، ولا سياسة RLS تفتح `profiles` لأي طرف غير المالك. هذا ليس
+حكماً نهائياً بأن `age` مستثنى دائماً من كل مشاركة مستقبلية بنفس
+معاملة Personality DNA (T4) — تلك خصوصية شخصية بحكم تعريفها ومحسومة.
+الحكم النهائي بخصوص `age` (هل يُستثنى دوماً، أم يُشارَك بشروط بعد حسم
+سياسة القاصرين) **مرتبط مباشرة بالقرار المعلَّق في RBAC.md ("تحديث حرج
+على سياسة القاصرين")** ولم يُحسم بعد. أي مسار موافقة أو دمج بيانات
+مستقبلي يعرض `profiles` لواجهات المنظمات (مثل Employer Portal، Sprint
+5) يجب أن يعود لهذا البند وللقرار المعلَّق في RBAC.md قبل تقرير مصير
+`age` فيه — لا أن يفترض معاملة T4 تلقائياً.

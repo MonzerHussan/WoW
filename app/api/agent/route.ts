@@ -3,13 +3,18 @@ import OpenAI from "openai";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import {
   buildAgentSystemPrompt,
+  buildCatalogContextBlock,
   buildDnaContextBlock,
   buildStyleHint,
   extractRecommendationBlock,
 } from "@/features/agent/prompt";
+import { getEnrollmentContext } from "@/features/agent/services/agent.service";
+import { getPublishedCourses } from "@/features/lms/services/course.service";
 import { agentRequestSchema, agentRecommendationSchema } from "@/shared/schemas/agent.schema";
 import { rateLimit } from "@/shared/lib/rate-limit";
 import { logger } from "@/shared/lib/logger";
+import { GOALS, GENDERS } from "@/shared/constants/onboarding";
+import { AccountType } from "@/shared/types";
 
 // Vercel's default serverless function timeout (10s on Hobby) is shorter
 // than this route's own worst case: a 15s OpenAI timeout plus one retry
@@ -97,33 +102,60 @@ export async function POST(req: NextRequest) {
   }
   const { message, history } = parsed.data;
 
-  const [{ data: profile }, { data: agentProfile }, { data: capabilities }, { data: skills }, { data: scores }, { data: recs }] =
-    await Promise.all([
-      supabase.from("profiles").select("full_name, points, level").eq("id", user.id).single(),
-      supabase.from("user_agent_profiles").select("chosen_name").eq("user_id", user.id).maybeSingle(),
-      supabase.from("user_capabilities").select("capability").eq("user_id", user.id),
-      supabase
-        .from("entity_skills")
-        .select("level, skills(name)")
-        .eq("entity_type", "user")
-        .eq("entity_id", user.id)
-        .order("level", { ascending: false })
-        .limit(5),
-      supabase
-        .from("career_scores")
-        .select("score")
-        .eq("user_id", user.id)
-        .eq("score_type", "employability")
-        .order("computed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from("career_recommendations")
-        .select("payload")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    { data: profile },
+    { data: agentProfile },
+    { data: capabilities },
+    { data: skills },
+    { data: weakSkills },
+    { data: scores },
+    { data: recs },
+    publishedCourses,
+    enrollments,
+  ] = await Promise.all([
+    supabase.from("profiles").select("full_name, points, level, account_type, onboarding_goal, age, gender").eq("id", user.id).single(),
+    supabase.from("user_agent_profiles").select("chosen_name").eq("user_id", user.id).maybeSingle(),
+    supabase.from("user_capabilities").select("capability").eq("user_id", user.id),
+    supabase
+      .from("entity_skills")
+      .select("level, skills(name)")
+      .eq("entity_type", "user")
+      .eq("entity_id", user.id)
+      .order("level", { ascending: false })
+      .limit(5),
+    // Deliberately NOT a free-text "weaknesses" field (no such column
+    // exists, and T2's "no score without evidence" principle rules one
+    // out) — the agent infers gaps the same way it infers strengths:
+    // from the user's own recorded entity_skills, just sorted the other
+    // way. Small skill sets can make this list overlap with topSkills
+    // above; that's an accepted MVP tradeoff, not a bug.
+    supabase
+      .from("entity_skills")
+      .select("level, skills(name)")
+      .eq("entity_type", "user")
+      .eq("entity_id", user.id)
+      .order("level", { ascending: true })
+      .limit(5),
+    supabase
+      .from("career_scores")
+      .select("score")
+      .eq("user_id", user.id)
+      .eq("score_type", "employability")
+      .order("computed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("career_recommendations")
+      .select("payload")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    // Real catalog grounding (fixes the "recommends Udemy/Coursera"
+    // bug — without this, the model has zero idea WOW has real courses
+    // and falls back to its own training knowledge).
+    getPublishedCourses(supabase),
+    getEnrollmentContext(supabase, user.id),
+  ]);
 
   if (!profile) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
@@ -131,15 +163,24 @@ export async function POST(req: NextRequest) {
 
   const agentName = agentProfile?.chosen_name || "رفيق";
   const activeCapabilities = (capabilities || []).map((c: any) => c.capability as string);
+  const goalOption = profile.onboarding_goal
+    ? GOALS[profile.account_type as AccountType]?.find((g) => g.value === profile.onboarding_goal)
+    : null;
+  const genderOption = profile.gender ? GENDERS.find((g) => g.value === profile.gender) : null;
 
   const systemPrompt =
     buildAgentSystemPrompt(agentName, buildStyleHint(activeCapabilities)) +
+    buildCatalogContextBlock(publishedCourses, enrollments) +
     buildDnaContextBlock({
       full_name: profile.full_name,
       points: profile.points,
       level: profile.level,
       capabilities: activeCapabilities,
+      age: profile.age,
+      gender: genderOption?.ar || null,
+      reasonForJoining: goalOption?.ar || profile.onboarding_goal,
       topSkills: (skills || []).map((s: any) => ({ name: s.skills?.name || "", level: s.level })),
+      weakSkills: (weakSkills || []).map((s: any) => ({ name: s.skills?.name || "", level: s.level })),
       latestEmployabilityScore: scores?.score ?? null,
       recentRecommendations: (recs || []).map((r: any) => r.payload?.message).filter(Boolean),
     });

@@ -28,3 +28,35 @@ export async function getAgentInitialState(supabase: SupabaseClient, userId: str
     needsNaming: !agentProfile || agentProfile.updated_at === agentProfile.created_at,
   };
 }
+
+export interface AgentEnrollmentContext {
+  courseId: string;
+  courseTitle: string;
+  progress: number;
+  status: string;
+}
+
+/**
+ * The user's own enrollments, for the agent's "what have you actually
+ * started" grounding — distinct from the full published catalog (which
+ * is platform-wide, not user-specific). RLS ("Enrollments are viewable
+ * by owner") already scopes this to the caller.
+ */
+export async function getEnrollmentContext(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<AgentEnrollmentContext[]> {
+  const { data, error } = await supabase
+    .from("enrollments")
+    .select("course_id, progress, status, courses(title)")
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((e: any) => ({
+    courseId: e.course_id,
+    courseTitle: e.courses?.title || "",
+    progress: e.progress,
+    status: e.status,
+  }));
+}

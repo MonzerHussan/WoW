@@ -22,6 +22,25 @@
 **Was:** `004`'s own comment said career score inserts were "system only" but no policy was ever written to permit *any* role to insert — this silently blocked even the self-service auto-quiz-pass path, unrelated to the assessor flow. `system_actors` (used to attribute AI-computed scores/recommendations) has no RLS enabled at all, yet returned empty for every role — a missing base `GRANT SELECT`, not an RLS gap (RLS policies have no effect on a table where RLS was never enabled).
 **Fixed:** `013` adds an owner-only INSERT policy on `career_scores` (covers the auto-pass path only — assessor-confirmed recompute is deliberately deferred, see TECH_DEBT.md #9) and a plain `GRANT SELECT ... TO anon, authenticated` on `system_actors` (public, non-sensitive reference data — same trust level as `skills`/`skill_categories`).
 
+## Sensitive field addition: `profiles.age`/`gender` (migration 016, 2026-07-23)
+
+New columns, added per an explicit owner decision (RBAC.md "تحديث حرج على
+سياسة القاصرين"). No new RLS policy was written or needed: `profiles`
+already has exactly one SELECT policy ("Profiles are viewable by owner")
+and no organization-facing policy exists on this table at all — unlike
+`career_profiles`/`career_scores`, which are exposed to orgs through
+`career_consents.scope`. Verified before shipping that no code path
+selects `profiles.*` (or these columns specifically) into any
+org-facing query or API response; `age`/`gender` reach exactly two
+places: the owner's own onboarding review screen and the agent's system
+prompt (sent to OpenAI on the user's own behalf, same trust boundary as
+every other DNA field already in that prompt). Whether `age` specifically
+gets folded into any future `career_consents.scope` is an open policy
+question, not decided now — it's tied to the still-pending minors-policy
+call in RBAC.md, see DOMAIN_CONTRACTS.md §11. `gender` has no documented
+sensitivity decision at all and no claim is made about it here beyond
+today's RLS boundary.
+
 ## Instructor personal courses + live sessions (migration 014)
 
 **File:** `supabase/migrations/014_instructor_personal_courses_and_live_sessions.sql`

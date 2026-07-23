@@ -20,8 +20,9 @@ export function buildAgentSystemPrompt(agentName: string, styleHint: string) {
 # YOU ACT, NOT JUST TALK
 You have the user's real Career DNA in the context block below (skills,
 active capabilities, latest employability score, recent recommendation
-history). Ground every answer in it — if a field is missing, ask a short
-clarifying question instead of guessing.
+history), the real WOW course catalog, and this user's own real
+enrollments. Ground every answer in these — if a field is missing, ask a
+short clarifying question instead of guessing.
 
 When you have a genuinely specific, actionable next step for the user based
 on their actual DNA (not on every turn — only when it's warranted and not a
@@ -30,8 +31,11 @@ your reply with exactly one fenced block in this exact format:
 \`\`\`rec
 {"kind":"learn_skill|add_project|apply_job|complete_course|take_assessment|other","payload":{},"message":"short actionable text in the user's language"}
 \`\`\`
-This gets written to their actual recommendation record — not shown to the
-user as raw JSON, so keep your normal reply readable on its own without it.
+When kind is "complete_course", payload MUST include
+{"course_id":"<the exact id from the REAL WOW CATALOG block>"} — never a
+fabricated id, and never for a course not in that block. This gets
+written to their actual recommendation record — not shown to the user
+as raw JSON, so keep your normal reply readable on its own without it.
 Omit the block entirely when you have nothing new and concrete to recommend.
 
 # STYLE FOR THIS TURN
@@ -44,6 +48,14 @@ ${styleHint}
   professional if asked.
 - Never fabricate specific company job openings — only reference roles
   explicitly passed to you as real platform listings.
+- **Never recommend or describe courses from outside WOW** (Udemy,
+  Coursera, LinkedIn Learning, or any other external platform). If the
+  REAL WOW CATALOG block below is empty, say plainly that no courses are
+  published yet — do not fill the gap with general knowledge. When you
+  do recommend a course, it must be one explicitly listed in that block,
+  and you must point the user to its real page: /courses/{the exact id
+  from that block}, or /courses for the general catalog if no single
+  course fits. Never invent a course id.
 - Do not pretend to be a human. If asked, say plainly that you're an AI
   agent built for the WOW platform.
 - Keep replies concise by default (3-6 sentences or a short list).
@@ -72,24 +84,88 @@ interface DnaContext {
   points: number;
   level: number;
   capabilities: string[];
+  age: number | null;
+  gender: string | null;
+  reasonForJoining: string | null;
   topSkills: { name: string; level: number | null }[];
+  weakSkills: { name: string; level: number | null }[];
   latestEmployabilityScore: number | null;
   recentRecommendations: string[];
 }
 
+/**
+ * "Strengths/weaknesses" are never a free-text field the user fills in —
+ * there is no such column, and T2 ("no score without evidence") rules
+ * one out. Both are inferred here, at request time, from the user's own
+ * entity_skills rows: highest-level = strengths, lowest-level = gaps.
+ * Nothing is persisted; this is presentation logic only.
+ */
 export function buildDnaContextBlock(ctx: DnaContext) {
   return `
 # USER CONTEXT (Career DNA)
 - Name: ${ctx.full_name}
 - Points: ${ctx.points} · Level: ${ctx.level}
 - Active capabilities: ${ctx.capabilities.length ? ctx.capabilities.join(", ") : "none yet"}
-- Top documented skills: ${
+- Age: ${ctx.age ?? "not stated"} · Gender: ${ctx.gender || "not stated"}
+- Reason they joined WOW: ${ctx.reasonForJoining || "not stated"}
+- Strengths (highest documented skill levels): ${
     ctx.topSkills.length ? ctx.topSkills.map((s) => `${s.name}${s.level ? ` (level ${s.level}/5)` : ""}`).join(", ") : "none yet"
+  }
+- Gaps (lowest documented skill levels — not "no skill at all", just this user's weakest recorded ones): ${
+    ctx.weakSkills.length ? ctx.weakSkills.map((s) => `${s.name}${s.level ? ` (level ${s.level}/5)` : ""}`).join(", ") : "none yet"
   }
 - Latest employability score: ${ctx.latestEmployabilityScore ?? "not computed yet"}
 - Recent recommendations already given (do not repeat these): ${
     ctx.recentRecommendations.length ? ctx.recentRecommendations.join(" | ") : "none"
   }
+`;
+}
+
+interface CatalogCourse {
+  id: string;
+  title: string;
+  summary: string | null;
+  track: string;
+}
+
+interface EnrollmentSummary {
+  courseId: string;
+  courseTitle: string;
+  progress: number;
+  status: string;
+}
+
+/**
+ * The fix for the "recommends Udemy/Coursera" bug: without this block,
+ * the model has zero grounding that WOW even has real courses, and
+ * falls back entirely to its own training knowledge. `courses` is the
+ * live published catalog (same query as the public /courses page);
+ * `enrollments` is this specific user's own registrations — kept
+ * separate from the catalog since "courses that exist" and "courses
+ * this user actually started" are different facts the agent needs to
+ * distinguish (e.g. "you're already enrolled" vs "you could enroll in").
+ */
+export function buildCatalogContextBlock(courses: CatalogCourse[], enrollments: EnrollmentSummary[]) {
+  const catalogLines = courses.length
+    ? courses.map((c) => `- id=${c.id} · "${c.title}" (${c.track})${c.summary ? ` — ${c.summary}` : ""}`).join("\n")
+    : "(no courses published yet)";
+
+  const enrollmentLines = enrollments.length
+    ? enrollments
+        .map((e) => `- "${e.courseTitle}" (id=${e.courseId}): ${e.status}, ${e.progress}% complete`)
+        .join("\n")
+    : "(not enrolled in anything yet)";
+
+  return `
+# REAL WOW CATALOG (the only courses that actually exist on this platform — never substitute outside knowledge)
+${catalogLines}
+
+# THIS USER'S OWN ENROLLMENTS
+${enrollmentLines}
+
+To register for a real course, the user goes to /courses (browse) or
+/courses/{id} (a specific course from the catalog above) and clicks
+"سجّل في الدورة" — there is no external signup process.
 `;
 }
 

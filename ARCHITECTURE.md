@@ -76,10 +76,11 @@ The agent is **never called from the client with the OpenAI key**. The flow is:
 ```
 AgentChat (client) → POST /api/agent → load profile + agent name +
 capabilities + top skills + latest employability score +
-recent recommendations (server) → inject as context →
-OpenAI chat.completions → strip a trailing ```rec fenced block if
-present and insert it into career_recommendations → persist both
-turns to ai_conversations → return reply to client
+recent recommendations + published course catalog + this user's own
+enrollments (server) → inject as context → OpenAI chat.completions →
+strip a trailing ```rec fenced block if present and insert it into
+career_recommendations → persist both turns to ai_conversations →
+return reply to client
 ```
 
 The system prompt is built dynamically per request
@@ -92,9 +93,41 @@ presence can't distinguish "never asked" from "kept the default on
 purpose" — the row's own `updated_at` only moves once a name has
 actually been saved.
 
+**Catalog grounding**: the agent's only source of truth for courses is
+`buildCatalogContextBlock()` (`features/agent/prompt.ts`), fed the live
+published catalog (`getPublishedCourses`, reused from `features/lms/`)
+and the caller's own `enrollments` (`getEnrollmentContext`,
+`features/agent/services/agent.service.ts`). Without this block the
+model had zero signal that WOW has real courses at all and fell back
+to its own training knowledge — it was recommending Udemy/Coursera/
+LinkedIn Learning for "how do I register for a course," which the
+guardrails in `buildAgentSystemPrompt` now explicitly forbid: any
+course recommendation must cite a real `course_id` from that block and
+link to `/courses/{id}`; an empty catalog must be stated plainly, never
+papered over with outside knowledge. The `complete_course` recommendation
+kind carries the same real `course_id` in its payload for the same
+reason.
+
 Free to use for now — `spend_coins()` (007b) is not wired to `/api/agent`
 yet; that's a subscriptions-sprint task, per an explicit product
 decision, not an oversight.
+
+**Profile grounding** (migration 016): `buildDnaContextBlock()` also
+carries `age`, `gender`, and `reasonForJoining` (`profiles.onboarding_goal`,
+resolved to its display label via `GOALS[account_type]`) straight from
+the profile row — `age`/`gender` are nullable, so pre-existing accounts
+that signed up before 016 render as "not stated" rather than erroring.
+"Strengths" and "gaps" are **not** stored fields — there is no
+free-text column for either, deliberately, per T2's "no score without
+evidence" principle. Both are computed at request time from the
+caller's own `entity_skills` rows (highest 5 by level = strengths,
+lowest 5 = gaps); a user with few recorded skills can see the same
+skill appear in both lists, which is an accepted small-N artifact, not
+a bug. Verified via a real logged system prompt (not just a code read)
+for two accounts: a fresh signup showed `Age: 27 · Gender: أنثى` and the
+model's own reply used matching Arabic feminine grammar unprompted; a
+pre-016 account correctly showed `Age: not stated · Gender: not
+stated` with no error.
 
 ## 5. Points / gamification
 

@@ -8,10 +8,11 @@ import { Button } from "@/shared/components/Button";
 import { Card, ErrorState } from "@/shared/components/Feedback";
 import { translateAuthError } from "@/shared/i18n/supabase-errors";
 import { ACCOUNT_TYPES } from "@/shared/constants/account-types";
-import { GOALS, PMP_LEVELS } from "@/shared/constants/onboarding";
+import { GOALS, GENDERS, PMP_LEVELS } from "@/shared/constants/onboarding";
 import { onboardingCompleteSchema } from "@/shared/schemas/onboarding.schema";
 import { completeOnboarding } from "@/features/onboarding/services/onboarding.service";
-import { AccountType } from "@/shared/types";
+import { AccountType, Gender } from "@/shared/types";
+import { Input, FormField } from "@/shared/components/Input";
 import StepIndicator from "./StepIndicator";
 
 const VALID_TYPES = ACCOUNT_TYPES.map((a) => a.value);
@@ -28,15 +29,23 @@ export function OnboardingWizard() {
 
   const [accountType, setAccountType] = useState<AccountType | null>(initialType);
   const [step, setStep] = useState(0);
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState<Gender | null>(null);
   const [goal, setGoal] = useState<string | null>(null);
   const [pmpLevel, setPmpLevel] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const ageNum = Number(age);
+  const ageValid = age.trim() !== "" && Number.isInteger(ageNum) && ageNum >= 5 && ageNum <= 120;
+
   async function finishOnboarding() {
     if (!accountType) return;
-    const parsed = onboardingCompleteSchema.safeParse({ goal, pmpLevel });
-    if (!parsed.success) return;
+    const parsed = onboardingCompleteSchema.safeParse({ goal, pmpLevel, age: ageNum, gender });
+    if (!parsed.success) {
+      setError(t("onboarding.errAge"));
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -64,7 +73,7 @@ export function OnboardingWizard() {
           <LangToggle lang={lang} onChange={setLang} />
         </div>
 
-        <StepIndicator total={4} current={step} />
+        <StepIndicator total={5} current={step} />
 
         {step === 0 && (
           <div className="flex flex-col gap-5">
@@ -105,7 +114,45 @@ export function OnboardingWizard() {
           </div>
         )}
 
-        {step === 1 && accountType && (
+        {step === 1 && (
+          <div className="flex flex-col gap-4">
+            <h1 className="font-display font-black text-xl text-navy">{t("onboarding.step1bTitle")}</h1>
+            <p className="text-sm text-ink-soft -mt-2">{t("onboarding.step1bHint")}</p>
+            <FormField label={t("onboarding.ageLabel")}>
+              <Input
+                type="number"
+                min={5}
+                max={120}
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder={t("onboarding.agePlaceholder")}
+              />
+            </FormField>
+            <FormField label={t("onboarding.genderLabel")}>
+              <div className="flex flex-col gap-2">
+                {GENDERS.map((g) => (
+                  <button
+                    key={g.value}
+                    type="button"
+                    onClick={() => setGender(g.value)}
+                    className={`text-start rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                      gender === g.value ? "border-navy bg-navy text-white" : "border-line text-ink-soft hover:border-navy/40"
+                    }`}
+                  >
+                    {lang === "ar" ? g.ar : g.en}
+                  </button>
+                ))}
+              </div>
+            </FormField>
+            {age.trim() !== "" && !ageValid && <ErrorState message={t("onboarding.errAge")} />}
+            <div className="flex gap-3 mt-2">
+              <Button variant="ghost" onClick={() => setStep(0)}>{t("common.back")}</Button>
+              <Button disabled={!ageValid} onClick={() => setStep(2)}>{t("common.next")}</Button>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && accountType && (
           <div className="flex flex-col gap-4">
             <h1 className="font-display font-black text-xl text-navy">{t("onboarding.step2Title")}</h1>
             <div className="flex flex-col gap-2">
@@ -122,13 +169,13 @@ export function OnboardingWizard() {
               ))}
             </div>
             <div className="flex gap-3 mt-2">
-              <Button variant="ghost" onClick={() => setStep(0)}>{t("common.back")}</Button>
-              <Button disabled={!goal} onClick={() => setStep(2)}>{t("common.next")}</Button>
+              <Button variant="ghost" onClick={() => setStep(1)}>{t("common.back")}</Button>
+              <Button disabled={!goal} onClick={() => setStep(3)}>{t("common.next")}</Button>
             </div>
           </div>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <div className="flex flex-col gap-4">
             <h1 className="font-display font-black text-xl text-navy">{t("onboarding.step3Title")}</h1>
             <p className="text-sm text-ink-soft -mt-2">{t("onboarding.step3Sub")}</p>
@@ -146,14 +193,14 @@ export function OnboardingWizard() {
               ))}
             </div>
             <div className="flex gap-3 mt-2">
-              <Button variant="ghost" onClick={() => setStep(1)}>{t("common.back")}</Button>
-              <Button onClick={() => setStep(3)}>{t("common.next")}</Button>
+              <Button variant="ghost" onClick={() => setStep(2)}>{t("common.back")}</Button>
+              <Button onClick={() => setStep(4)}>{t("common.next")}</Button>
             </div>
             <button
               className="text-xs text-ink-soft underline"
               onClick={() => {
                 setPmpLevel(null);
-                setStep(3);
+                setStep(4);
               }}
             >
               {t("onboarding.notInterested")}
@@ -161,13 +208,23 @@ export function OnboardingWizard() {
           </div>
         )}
 
-        {step === 3 && accountType && acc && (
+        {step === 4 && accountType && acc && (
           <div className="flex flex-col gap-4">
             <h1 className="font-display font-black text-xl text-navy">{t("onboarding.step4Title")}</h1>
             <div className="rounded-xl border border-line divide-y divide-line overflow-hidden">
               <div className="flex justify-between px-4 py-3 text-sm">
                 <span className="text-ink-soft">{t("onboarding.account")}</span>
                 <span className="font-bold">{acc.icon} {lang === "ar" ? acc.ar : acc.en}</span>
+              </div>
+              <div className="flex justify-between px-4 py-3 text-sm">
+                <span className="text-ink-soft">{t("onboarding.age")}</span>
+                <span className="font-bold">{age}</span>
+              </div>
+              <div className="flex justify-between px-4 py-3 text-sm">
+                <span className="text-ink-soft">{t("onboarding.gender")}</span>
+                <span className="font-bold">
+                  {gender ? (lang === "ar" ? GENDERS.find((g) => g.value === gender)?.ar : GENDERS.find((g) => g.value === gender)?.en) : t("onboarding.none")}
+                </span>
               </div>
               <div className="flex justify-between px-4 py-3 text-sm">
                 <span className="text-ink-soft">{t("onboarding.goal")}</span>
