@@ -446,6 +446,47 @@ export const dictionary = {
     listen: { ar: "استماع", en: "Listen" },
     grammarPointTitle: { ar: "نقطة قواعدية", en: "Grammar point" },
     pronounceWord: { ar: "نطق", en: "Pronounce" },
+    prevLesson: { ar: "الدرس السابق", en: "Previous lesson" },
+    nextLesson: { ar: "الدرس التالي", en: "Next lesson" },
+    record: { ar: "سجّل نطقك", en: "Record yourself" },
+    recording: { ar: "جارِ التسجيل... اضغط للإيقاف", en: "Recording... tap to stop" },
+    playMine: { ar: "استمع لتسجيلك", en: "Play your recording" },
+    recordAgain: { ar: "أعد التسجيل", en: "Record again" },
+    evaluateMine: { ar: "قيّم نطقي", en: "Evaluate mine" },
+    evaluating: { ar: "جارِ التقييم...", en: "Evaluating..." },
+    heardYouSay: { ar: "سمعناك تقول:", en: "We heard you say:" },
+    pronunciationDisclaimer: {
+      ar: "التقييم يقيس دقة الكلمات المنطوقة فقط (عبر تحويل الكلام إلى نص) — لا يقيس اللكنة أو جودة النطق الصوتي، لأن وكيلك يستقبل نصًا ولا يسمع تسجيلك.",
+      en: "Evaluation measures word accuracy only (via speech-to-text) — not accent or sound quality, because your agent receives text and never hears your recording.",
+    },
+    recordingNotStored: {
+      ar: "تسجيلك لا يُرفع ولا يُحفظ في أي مكان — يبقى في متصفحك ويختفي بإغلاق الصفحة.",
+      en: "Your recording is never uploaded or stored — it stays in your browser and disappears when you close the page.",
+    },
+    micDenied: {
+      ar: "تعذّر الوصول للميكروفون. اسمح للمتصفح باستخدامه ثم أعد المحاولة.",
+      en: "Couldn't access the microphone. Allow browser access and try again.",
+    },
+    micUnsupported: {
+      ar: "متصفحك لا يدعم التسجيل الصوتي.",
+      en: "Your browser doesn't support audio recording.",
+    },
+    speechUnsupported: {
+      ar: "التقييم غير متاح في هذا المتصفح (يتطلب Chrome أو Edge). التسجيل والاستماع لنطقك يعملان بشكل طبيعي — ولن تُخصم أي كوينز.",
+      en: "Evaluation isn't available in this browser (needs Chrome or Edge). Recording and listening back work normally — and no coins are charged.",
+    },
+    speechFailed: {
+      ar: "تعذّر تحويل كلامك إلى نص، فلا يمكن التقييم — ولم تُخصم أي كوينز. تسجيلك ما زال متاحًا للاستماع.",
+      en: "We couldn't turn your speech into text, so evaluation isn't possible — and no coins were charged. Your recording is still playable.",
+    },
+    speechEmpty: {
+      ar: "لم نلتقط أي كلام واضح. حاول التسجيل مرة أخرى — لم تُخصم أي كوينز.",
+      en: "We didn't catch any clear speech. Try recording again — no coins were charged.",
+    },
+    insufficientCoinsPronunciation: {
+      ar: "رصيدك من الكوينز غير كافٍ لهذا التقييم.",
+      en: "Your coin balance isn't enough for this evaluation.",
+    },
     moduleClosingTitle: { ar: "لإنهاء هذه الوحدة", en: "To wrap up this module" },
     languageTask: { ar: "مهمة لغوية اختيارية", en: "Optional language task" },
     coinCost: { ar: "تكلفة (كوينز)", en: "Cost (coins)" },

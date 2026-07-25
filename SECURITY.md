@@ -49,6 +49,18 @@ today's RLS boundary.
 **Fixed:** 018 adds one DELETE policy, scoped as narrowly as the INSERT/SELECT policies already are: `user_id = auth.uid() and not exists (select 1 from coin_transactions where ref_table = 'language_task_submissions' and ref_id = language_task_submissions.id)`. A row can only be deleted by its own owner, and only if it was never actually paid for — a genuinely successful, paid submission remains permanently undeletable by anyone, preserving 017's original guarantee.
 **Verified live**, all via REST with the test account's own JWT: a real orphaned row (created by a genuine 402) deleted successfully post-fix (`200`, row returned in body); the same DELETE attempted against an already-*paid* row returned `200` with an **empty** body — RLS silently blocked it, and the row was confirmed still present immediately after. A clean resubmission of the same lesson (after restoring the test balance) then succeeded end-to-end: correct debit, new `language_task_submissions` + `coin_transactions` rows, and a real agent reply.
 
+## Pronunciation practice (migration 021, 2026-07-25)
+
+**Coin cost is server-side, never client-supplied.** `COIN_COSTS.PRONUNCIATION_EVALUATION` (`shared/constants/coins.ts`) is the single source of truth, read inside `POST /api/lms/pronunciation/evaluate`; the request schema (`shared/schemas/pronunciation.schema.ts`) deliberately has **no** `coinCost` field, so a client cannot propose a price. Same rule CLAUDE.md #4 already fixed once for points. Charging goes through the existing `spend_coins()` (007b) — no new spending path was invented.
+
+**Rollback policy carried forward from 018, not rediscovered.** The route inserts the attempt row before charging, so it needs a working DELETE to undo that row when the charge fails. 021 therefore ships its DELETE policy *up front*, scoped identically to 018's: an attempt is deletable only by its owner and only while no `coin_transactions` row references it — a paid attempt is permanent. Without this the rollback would silently no-op (zero-row DELETE reads as success), which is exactly the orphaned-row bug 018 had to fix retroactively.
+
+**No unique constraint, deliberately.** Unlike `language_task_submissions`, repeated attempts are the intended behavior, so the unique index cannot serve as an anti-double-charge guard here. Nothing needs it to: each attempt is a distinct, intentional purchase. This does mean the endpoint is repeatable at will, bounded only by the user's own balance — an ordinary spend, not an exploit, since every call debits real coins (contrast with the *unlimited free* simulated purchase, which is a genuine launch blocker in TECH_DEBT.md).
+
+**No audio ever reaches the server.** Recordings stay in browser memory (Blob + object URL, revoked on unmount) and are never uploaded; only the reference text and the speech-to-text transcript are stored. There is consequently no voice-data retention duty, and the UI says so explicitly.
+
+**Charge ordering.** Coins are spent only after a non-empty transcript exists (produced client-side during recording, and re-validated server-side by the schema's `min(1)`). A failed or empty transcription never reaches the endpoint and never costs anything.
+
 ## Wallet purchase simulation (migration 020, 2026-07-25)
 
 `credit_coins(p_user, p_package_id)` — same security shape as

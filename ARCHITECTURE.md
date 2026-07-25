@@ -395,3 +395,97 @@ anywhere (same pre-existing gap the lesson player had before §11's
 fix, out of scope for this task), so in practice a real user never
 sees the English name today; the code path exists and is correct, but
 is currently unreachable.
+
+**Update (language persistence, §13):** once `useLang` began persisting
+the choice, `WalletPanel` — which calls `useLang` itself — did start
+showing `name_en`. What remains is narrower and is now tracked as
+TECH_DEBT #13: `ProfileView` still receives a hardcoded `lang="ar"`
+prop, so the panels around the wallet stay Arabic while the wallet
+follows the persisted language, and `/profile` still offers no way to
+switch language from the page itself.
+
+## 13. Language persistence + the lesson player's pronunciation tools (migration 021)
+
+**`useLang` now persists** (`localStorage`, key `wow.lang`). It reads
+storage inside an effect rather than during render, deliberately: the
+server cannot see `localStorage`, so seeding state from it directly
+would make the first client render disagree with the server's HTML —
+a real hydration mismatch. The cost is a brief first paint in the
+default language before a stored non-default choice applies. A
+server-read cookie would remove even that flash, but only by threading
+an initial language through every page that renders a translated
+component. Each `useLang()` call still owns its own state, so two
+independent toggles on one page would not live-sync; no page mounts
+two today.
+
+**The lesson player** (`features/lms/components/LessonView.tsx`) owns
+the toggle for the lesson route and passes `lang` down as a prop to
+every child that needs it, rather than each child calling `useLang`
+separately — that mismatch is what left "Mark as complete" stuck in
+Arabic once before. Its header is `sticky top-0` so the toggle stays
+reachable while reading. Prev/next navigation is computed in
+`getLessonNeighbors` (`lesson.service.ts`) over
+`(module.order_index, lesson.order_index)`, so it crosses module
+boundaries — the last lesson of a module links to the first of the
+next. RLS filters that list like everything else, so a locked lesson
+simply isn't a neighbor. The unavailable direction is omitted, not
+rendered disabled.
+
+**Pronunciation practice** (`PronunciationPractice`, migration 021)
+lets a learner record themselves reading any English text on the page
+— lesson body, each vocabulary word, each grammar example — listen
+back, and optionally pay `COIN_COSTS.PRONUNCIATION_EVALUATION` (3) to
+have their agent compare what they said against the reference. The
+recording and playback are free and unlimited; only the evaluation
+costs coins, and it is repeatable without limit by design (021 has no
+unique constraint, unlike `language_task_submissions` — repeated
+drilling is the point).
+
+The load-bearing constraint, verified against the live API surface
+rather than assumed: **`SpeechRecognition` cannot transcribe a
+recorded Blob.** It does live capture only and exposes no way to
+accept a `MediaStream` (its entire surface is `grammars, lang,
+continuous, interimResults, maxAlternatives, abort, start, stop,
+processLocally, phrases`). So one press must drive `MediaRecorder`
+*and* `SpeechRecognition` at the same moment — two independent
+captures of the same microphone, not a shared stream — and the
+transcript must be produced while speaking, not derived afterwards.
+
+**⚠️ The dual capture has NOT been verified against a real microphone.**
+It was built and tested in an environment where microphone access is
+blocked, so what is confirmed is: both APIs are present, the interface
+genuinely cannot take a `MediaStream`, and every *failure* path behaves
+correctly (a denied microphone shows its reason and stays out of the
+recording state; a missing `SpeechRecognition` hides the paid button
+and explains why). What is **not** confirmed is that `MediaRecorder`
+and `SpeechRecognition` actually capture the same microphone
+concurrently without conflict on real Chrome/Edge — that is the
+expected behavior on Windows (WASAPI shared mode), but it is an
+inference, not an observation. **This needs one manual confirmation on
+a real device.** The graceful degradation below is deliberately built
+to cover its failure, so a conflict would surface as a visible,
+non-charged error rather than a broken feature — but the happy path
+should not be described as verified until someone has actually spoken
+into a microphone and seen a transcript come back.
+
+Because that dual capture can fail in ways outside our control, every
+failure is surfaced and none is chargeable: no `SpeechRecognition`
+(Firefox) leaves recording and playback fully working with the
+evaluate button hidden and the reason shown; a recognition error or an
+empty result leaves the recording playable and explains why evaluation
+isn't possible. Coins are only ever spent once a non-empty transcript
+already exists, so a user cannot pay for recognition that didn't work.
+
+**No audio is ever uploaded or stored** — it lives as an in-memory
+Blob plus an object URL that is revoked on unmount, and dies with the
+page. Only text reaches the server. This is also why the UI states
+plainly that the evaluation measures word accuracy via speech-to-text
+and *not* accent or sound quality: the agent receives a transcript and
+never hears the recording.
+
+**Note on `lesson.title` → `localized.title`:** the title's listen
+button originally spoke the raw `lesson.title` because that was the
+explicit spec at the time ("`lesson.title` بالإنجليزي دائماً، ليس
+`localized.title`"). Switching it to `localized.title` (and showing it
+only in EN) is a later product decision by the owner, not a regression
+being corrected.

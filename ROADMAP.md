@@ -359,6 +359,38 @@ three unrelated non-PMP lessons, confirming no `UPDATE` touched
 anything outside its intended single row). This closes the English
 language-development initiative for PMP Level 1 opened in this sprint.
 
+**Lesson player improvements, batch 1 (done, tested — migration 021)**:
+five items commissioned together after the language initiative closed.
+- **Vocabulary pronunciation regression fixed**: the TTS pass wired
+  listen buttons to the lesson title and body but not to each
+  vocabulary word, even though its own notes called for it. Every word
+  now has one, in either page language.
+- **Title listen button** now speaks `localized.title` and appears only
+  in EN. Recorded for accuracy: the original `lesson.title` behavior was
+  the explicit spec at the time — this is a later product decision by
+  the owner, not a regression being corrected.
+- **Sticky language toggle** on the lesson page, so it stays reachable
+  while reading (verified pinned at viewport top after scrolling to the
+  page maximum).
+- **Language choice now persists** across pages and reloads via
+  `useLang` + localStorage, replacing per-page local state. See
+  ARCHITECTURE.md §13 for the hydration-mismatch reasoning behind
+  reading storage in an effect rather than during render. Side effect
+  worth noting: this made `/profile`'s wallet panel start honoring the
+  persisted language while its sibling panels (hardcoded `lang="ar"`)
+  did not — TECH_DEBT #13 was rewritten to describe that real
+  inconsistency instead of its now-inaccurate original framing.
+- **Prev/next lesson navigation** across module boundaries
+  (TECH_DEBT #12, now closed and removed).
+- **Pronunciation practice** (migration 021): record yourself reading
+  any English text on the page, listen back, and optionally pay 3 coins
+  for agent feedback. Free and unlimited to record; the paid evaluation
+  is repeatable without limit by design. The architectural constraint
+  that shaped it — `SpeechRecognition` cannot transcribe a saved
+  recording, so both captures must run simultaneously — plus the
+  never-silent, never-charged failure handling and the no-audio-stored
+  guarantee are documented in ARCHITECTURE.md §13 and SECURITY.md.
+
 **Task 2 (done, tested — migration 020)**: real coin balance +
 `WalletPanel` on `/profile` (`features/profile/`), with a
 locally-simulated purchase flow for the 3 existing `coin_packages` via
