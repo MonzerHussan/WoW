@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLang } from "@/shared/hooks/useLang";
+import { t } from "@/shared/i18n/translations";
+import { Lang } from "@/shared/types";
 import { Button } from "@/shared/components/Button";
 import { ErrorState } from "@/shared/components/Feedback";
 import { REASON_POINTS } from "@/shared/constants/points";
 
-export function LessonCompleteButton({ lessonId, completed }: { lessonId: string; completed: boolean }) {
+export function LessonCompleteButton({
+  lessonId,
+  completed,
+  lang = "ar",
+}: {
+  lessonId: string;
+  completed: boolean;
+  lang?: Lang;
+}) {
   const router = useRouter();
-  const { t } = useLang("ar");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(completed);
@@ -26,7 +34,7 @@ export function LessonCompleteButton({ lessonId, completed }: { lessonId: string
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error || t("common.somethingWentWrong"));
+        setError(data?.error || t("common.somethingWentWrong", lang));
         return;
       }
       setDone(true);
@@ -36,7 +44,7 @@ export function LessonCompleteButton({ lessonId, completed }: { lessonId: string
       if (!data.alreadyCompleted && !data.pointsError) setPointsEarned(REASON_POINTS.LESSON_COMPLETE);
       router.refresh();
     } catch {
-      setError(t("common.somethingWentWrong"));
+      setError(t("common.somethingWentWrong", lang));
     } finally {
       setLoading(false);
     }
@@ -45,10 +53,12 @@ export function LessonCompleteButton({ lessonId, completed }: { lessonId: string
   if (done) {
     return (
       <div>
-        <div className="text-sm font-bold text-navy bg-navy/5 rounded-lg px-4 py-2 w-fit">{t("lms.lessonCompleted")}</div>
+        <div className="text-sm font-bold text-navy bg-navy/5 rounded-lg px-4 py-2 w-fit">
+          {t("lms.lessonCompleted", lang)}
+        </div>
         {pointsEarned != null && (
           <p className="text-xs text-ink-soft mt-2">
-            +{pointsEarned} {t("lms.pointsEarned")}
+            +{pointsEarned} {t("lms.pointsEarned", lang)}
           </p>
         )}
       </div>
@@ -63,7 +73,7 @@ export function LessonCompleteButton({ lessonId, completed }: { lessonId: string
         </div>
       )}
       <Button onClick={handleComplete} disabled={loading}>
-        {loading ? t("lms.completing") : t("lms.markComplete")}
+        {loading ? t("lms.completing", lang) : t("lms.markComplete", lang)}
       </Button>
     </div>
   );

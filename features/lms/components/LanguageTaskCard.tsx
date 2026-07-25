@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useLang } from "@/shared/hooks/useLang";
+import { t } from "@/shared/i18n/translations";
+import { Lang } from "@/shared/types";
 import { Button } from "@/shared/components/Button";
 import { ErrorState } from "@/shared/components/Feedback";
 import { sendAgentMessage } from "@/features/agent/services/agent.client";
@@ -14,6 +15,10 @@ import { sendAgentMessage } from "@/features/agent/services/agent.client";
  * charges the coins server-side, then (only on success) the same message
  * is handed to the existing /api/agent chat path for feedback — no
  * second OpenAI call site.
+ *
+ * `lang` is a prop, not this component's own useLang() — it shares one
+ * toggle with the rest of the lesson page (LessonView), not a second
+ * independent one.
  */
 export function LanguageTaskCard({
   lessonId,
@@ -21,14 +26,15 @@ export function LanguageTaskCard({
   coinCost,
   initialBalance,
   initialSubmitted,
+  lang,
 }: {
   lessonId: string;
   taskText: string;
   coinCost: number;
   initialBalance: number;
   initialSubmitted: boolean;
+  lang: Lang;
 }) {
-  const { t } = useLang("ar");
   const [response, setResponse] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +55,12 @@ export function LanguageTaskCard({
       if (!res.ok) {
         if (res.status === 402) {
           setBalance(data.balance ?? balance);
-          setError(t("lms.languageTaskInsufficientCoins"));
+          setError(t("lms.languageTaskInsufficientCoins", lang));
         } else if (res.status === 409) {
-          setError(t("lms.languageTaskAlreadySubmitted"));
+          setError(t("lms.languageTaskAlreadySubmitted", lang));
           setSubmitted(true);
         } else {
-          setError(data?.error || t("common.somethingWentWrong"));
+          setError(data?.error || t("common.somethingWentWrong", lang));
         }
         return;
       }
@@ -73,7 +79,7 @@ export function LanguageTaskCard({
         // feedback-fetch hiccup shouldn't look like the task failed.
       }
     } catch {
-      setError(t("common.somethingWentWrong"));
+      setError(t("common.somethingWentWrong", lang));
     } finally {
       setSubmitting(false);
     }
@@ -83,7 +89,7 @@ export function LanguageTaskCard({
     return (
       <div>
         <p className="text-sm font-bold text-navy bg-navy/5 rounded-lg px-4 py-2 w-fit">
-          {t("lms.languageTaskSubmitted")}
+          {t("lms.languageTaskSubmitted", lang)}
         </p>
         {feedback && <p className="text-sm text-ink leading-relaxed mt-3 bg-bg rounded-lg p-4">{feedback}</p>}
       </div>
@@ -95,17 +101,17 @@ export function LanguageTaskCard({
       <p className="text-sm text-ink mb-2">{taskText}</p>
       <div className="flex items-center justify-between text-xs text-ink-soft mb-2">
         <span>
-          {t("lms.coinCost")}: {coinCost} {t("lms.coinsUnit")}
+          {t("lms.coinCost", lang)}: {coinCost} {t("lms.coinsUnit", lang)}
         </span>
         <span>
-          {t("lms.walletBalance")}: {balance} {t("lms.coinsUnit")}
+          {t("lms.walletBalance", lang)}: {balance} {t("lms.coinsUnit", lang)}
         </span>
       </div>
       <textarea
         className="field-input w-full min-h-[120px] mb-3"
         value={response}
         onChange={(e) => setResponse(e.target.value)}
-        placeholder={t("lms.languageTaskPlaceholder")}
+        placeholder={t("lms.languageTaskPlaceholder", lang)}
       />
       {error && (
         <div className="mb-3">
@@ -113,7 +119,7 @@ export function LanguageTaskCard({
         </div>
       )}
       <Button onClick={handleSubmit} disabled={submitting || response.trim().length < 20}>
-        {submitting ? t("lms.languageTaskSubmitting") : t("lms.languageTaskSubmit")}
+        {submitting ? t("lms.languageTaskSubmitting", lang) : t("lms.languageTaskSubmit", lang)}
       </Button>
     </div>
   );
