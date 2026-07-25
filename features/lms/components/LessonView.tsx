@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useLang } from "@/shared/hooks/useLang";
 import { TranslationKey } from "@/shared/i18n/translations";
 import { LangToggle } from "@/shared/components/LangToggle";
+import { SpeakButton } from "@/shared/components/SpeakButton";
 import { LessonCompleteButton } from "@/features/lms/components/LessonCompleteButton";
 import { LanguageTaskCard } from "@/features/lms/components/LanguageTaskCard";
 import { LessonDetail } from "@/features/lms/services/lesson.service";
@@ -102,11 +103,23 @@ export function LessonView({
         </Link>
         <LangToggle lang={lang} onChange={setLang} />
       </div>
-      <h1 className="font-display font-black text-2xl text-navy mb-4">{localized.title || lesson.title}</h1>
+      <div className="flex items-center gap-3 mb-4">
+        <h1 className="font-display font-black text-2xl text-navy">{localized.title || lesson.title}</h1>
+        <SpeakButton text={lesson.title} lang="en-US" label={t("lms.listen")} />
+      </div>
 
       {lesson.video_url && <video controls src={lesson.video_url} className="w-full rounded-wow mb-6" />}
 
-      {localized.body && <p className="text-ink leading-relaxed mb-6">{localized.body}</p>}
+      {localized.body && (
+        <div className="mb-6">
+          <p className="text-ink leading-relaxed">{localized.body}</p>
+          {lang === "en" && (
+            <div className="mt-2">
+              <SpeakButton text={localized.body} lang="en-US" label={t("lms.listen")} />
+            </div>
+          )}
+        </div>
+      )}
 
       {toolboxText && (
         <div className="bg-navy/5 rounded-lg p-4 mb-6">
