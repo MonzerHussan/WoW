@@ -521,6 +521,16 @@ export const dictionary = {
     recStatusPending: { ar: "قيد الانتظار", en: "Pending" },
     recStatusDone: { ar: "مُنجزة", en: "Done" },
     recStatusDismissed: { ar: "متجاهَلة", en: "Dismissed" },
+    walletTitle: { ar: "محفظة الكوينز", en: "Coin wallet" },
+    walletBalance: { ar: "رصيدك الحالي", en: "Your current balance" },
+    coinsUnit: { ar: "كوينز", en: "coins" },
+    walletSimulatedWarning: {
+      ar: "⚠️ هذا شراء تجريبي محاكى فقط لأغراض الاختبار — لا توجد بوابة دفع حقيقية، ولن يُخصم أي مبلغ فعلي من أي بطاقة.",
+      en: "⚠️ This is a simulated test purchase only — there is no real payment gateway, and no actual charge will be made to any card.",
+    },
+    buyPackage: { ar: "اشترِ", en: "Buy" },
+    buying: { ar: "جارِ الشراء...", en: "Purchasing..." },
+    purchaseSuccess: { ar: "تمت إضافة الكوينز إلى رصيدك ✅", en: "Coins added to your balance ✅" },
   },
 
   agent: {

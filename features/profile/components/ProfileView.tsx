@@ -6,6 +6,7 @@ import { CertificatesList } from "@/features/profile/components/CertificatesList
 import { ScoreCard } from "@/features/profile/components/ScoreCard";
 import { CapabilitiesPanel } from "@/features/profile/components/CapabilitiesPanel";
 import { AgentRecommendationsPanel } from "@/features/profile/components/AgentRecommendationsPanel";
+import { WalletPanel } from "@/features/profile/components/WalletPanel";
 
 export function ProfileView({
   userId,
@@ -33,6 +34,8 @@ export function ProfileView({
       </div>
 
       <CapabilitiesPanel userId={userId} activeCapabilities={overview.activeCapabilities} lang={lang} />
+
+      <WalletPanel balance={overview.walletBalance} packages={overview.coinPackages} />
 
       <AgentRecommendationsPanel
         agentChosenName={overview.agentChosenName}

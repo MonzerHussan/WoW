@@ -359,12 +359,22 @@ three unrelated non-PMP lessons, confirming no `UPDATE` touched
 anything outside its intended single row). This closes the English
 language-development initiative for PMP Level 1 opened in this sprint.
 
-**Task 2 (next, still not started)**: activate the coin wallet more
-generally — real balance display on `/profile` (the language-task work
-above only surfaces balance inline on the lesson page, not a dedicated
-wallet view), UI for the 3 existing `coin_packages`, and a
-locally-simulated purchase flow (explicitly documented as temporary, no
-real payment gateway yet) that actually credits coins for testing.
+**Task 2 (done, tested — migration 020)**: real coin balance +
+`WalletPanel` on `/profile` (`features/profile/`), with a
+locally-simulated purchase flow for the 3 existing `coin_packages` via
+a new `credit_coins()` security-definer function (mirrors
+`spend_coins()`'s security shape in reverse — reads the coin amount
+from `coin_packages` server-side, never from the client) called from
+`POST /api/wallet/purchase`. `coin_packages` also gained a `name_en`
+column so package names follow the same bilingual pattern as every
+other user-facing table (see ARCHITECTURE.md §12 for why that branch
+is correct but currently unreachable on `/profile`, TECH_DEBT.md #14).
+Verified live: a real account's balance went 25 → 325 → 625 → 925
+across three consecutive purchases, each producing its own real
+`coin_transactions` row. **Explicitly not launch-safe as-is** — no rate
+limit on repeat purchases, a real payment gateway must replace this
+before real Beta traffic; see the dedicated launch-blocker section in
+TECH_DEBT.md.
 
 **Task 3 (deferred to its own future session, by explicit product
 decision)**: real-time voice chat via the OpenAI Realtime API, on the

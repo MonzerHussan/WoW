@@ -39,6 +39,14 @@ export interface RecommendationRow {
   createdAt: string;
 }
 
+export interface CoinPackageRow {
+  id: string;
+  name: string;
+  nameEn: string | null;
+  coins: number;
+  priceUsd: number;
+}
+
 export interface ProfileOverview {
   dna: {
     identity: Record<string, unknown>;
@@ -53,6 +61,8 @@ export interface ProfileOverview {
   activeCapabilities: string[];
   agentChosenName: string;
   recentRecommendations: RecommendationRow[];
+  walletBalance: number;
+  coinPackages: CoinPackageRow[];
 }
 
 async function getLatestScore(supabase: SupabaseClient, userId: string, scoreType: "employability" | "trust") {
@@ -83,6 +93,8 @@ export async function getProfileOverview(supabase: SupabaseClient, userId: strin
     { data: capabilities },
     { data: agentProfile },
     { data: recRows },
+    { data: wallet },
+    { data: packageRows },
   ] = await Promise.all([
     supabase
       .from("career_profiles")
@@ -110,6 +122,8 @@ export async function getProfileOverview(supabase: SupabaseClient, userId: strin
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase.from("wallets").select("balance").eq("user_id", userId).maybeSingle(),
+    supabase.from("coin_packages").select("id, name, name_en, coins, price_usd").eq("is_active", true),
   ]);
 
   return {
@@ -147,6 +161,14 @@ export async function getProfileOverview(supabase: SupabaseClient, userId: strin
       message: r.payload?.message || "",
       status: r.status,
       createdAt: r.created_at,
+    })),
+    walletBalance: wallet?.balance ?? 0,
+    coinPackages: (packageRows || []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      nameEn: p.name_en,
+      coins: p.coins,
+      priceUsd: p.price_usd,
     })),
   };
 }

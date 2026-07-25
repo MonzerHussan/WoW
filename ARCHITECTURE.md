@@ -171,6 +171,9 @@ them touch any row:
 - `award_quiz_points()` (013) — verifies the target attempt is real,
   passed, and graded by the calling assessor before paying out a fixed
   amount, with a `points_awarded` guard + row lock against replay.
+- `credit_coins()` (020) — verifies `p_user = auth.uid()`, then reads
+  the coin amount from `coin_packages` by id server-side; never accepts
+  a coin amount from the client. See §12.
 
 Plain per-column RLS policies are used instead only when the write is
 genuinely self-scoped (owner writing their own row) — see
@@ -360,3 +363,35 @@ the test account's own JWT: the orphaned row deleted successfully
 present), and a clean resubmission of the same lesson after restoring
 balance succeeded end-to-end (balance debited correctly, new
 submission + `coin_transactions` rows, real agent feedback returned).
+
+## 12. Wallet purchase simulation on `/profile` (migration 020)
+
+`credit_coins(p_user, p_package_id)` mirrors `spend_coins()`'s security
+model exactly, in reverse: reads the coin amount from `coin_packages`
+by id server-side, verifies `p_user = auth.uid()`, credits `wallets`,
+and inserts a `coin_transactions` row with `type='purchase'` and
+`reason='simulated_purchase'` — a deliberately distinct reason from any
+future real-gateway purchase, so the two stay filterable apart in any
+later financial reporting. Called from `POST /api/wallet/purchase`
+(`WalletPanel`, `features/profile/`), never directly from the client —
+same server-route-calls-the-RPC pattern as every other security
+definer function in this codebase (`spend_coins`, `award_quiz_points`,
+`run_nova_check_placeholder`).
+
+**This is explicitly a local simulation, not a payment integration —
+there is no gateway, no real charge, and (deliberately, for now) no
+rate limit on repeat purchases.** See TECH_DEBT.md: this path must be
+disabled or replaced with a real payment gateway before any Beta
+traffic beyond the closed test circle, same severity as RBAC.md's
+minors-policy launch blocker. Verified live: a real account's balance
+went 25 → 325 → 625 → 925 across three consecutive purchases of the
+same package, each producing its own real `coin_transactions` row
+(`amount=300, type='purchase', reason='simulated_purchase'`) — proving
+the "no limit" behavior is real, not assumed.
+
+`coin_packages.name_en` (also added in 020) is read and branched on
+correctly in `WalletPanel` — but `/profile` has no `LangToggle`
+anywhere (same pre-existing gap the lesson player had before §11's
+fix, out of scope for this task), so in practice a real user never
+sees the English name today; the code path exists and is correct, but
+is currently unreachable.

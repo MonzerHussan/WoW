@@ -49,6 +49,27 @@ today's RLS boundary.
 **Fixed:** 018 adds one DELETE policy, scoped as narrowly as the INSERT/SELECT policies already are: `user_id = auth.uid() and not exists (select 1 from coin_transactions where ref_table = 'language_task_submissions' and ref_id = language_task_submissions.id)`. A row can only be deleted by its own owner, and only if it was never actually paid for — a genuinely successful, paid submission remains permanently undeletable by anyone, preserving 017's original guarantee.
 **Verified live**, all via REST with the test account's own JWT: a real orphaned row (created by a genuine 402) deleted successfully post-fix (`200`, row returned in body); the same DELETE attempted against an already-*paid* row returned `200` with an **empty** body — RLS silently blocked it, and the row was confirmed still present immediately after. A clean resubmission of the same lesson (after restoring the test balance) then succeeded end-to-end: correct debit, new `language_task_submissions` + `coin_transactions` rows, and a real agent reply.
 
+## Wallet purchase simulation (migration 020, 2026-07-25)
+
+`credit_coins(p_user, p_package_id)` — same security shape as
+`spend_coins()`: `security definer`, verifies `p_user = auth.uid()`
+before touching anything, and the coin amount is *never* client-supplied
+— it's read from `coin_packages.coins` by `p_package_id` inside the
+function. `revoke execute ... from anon` matches `spend_coins()`'s own
+grant. Called only from `POST /api/wallet/purchase`, never directly
+from the client (`supabaseBrowser()`), matching every other
+security-definer call site in this codebase.
+
+**Deliberately no rate limit on repeat purchases** — this is a known,
+explicitly-accepted gap for a locally-simulated purchase with no real
+money involved, not an oversight. Verified live that it behaves exactly
+as expected: three consecutive purchases of the same package from the
+same account each succeeded and each produced its own real
+`coin_transactions` row (`25 → 325 → 625 → 925`). **This must not ship
+to real Beta traffic as-is** — see TECH_DEBT.md, same severity as
+RBAC.md's minors-policy launch blocker: today, any authenticated user
+can mint unlimited free coins by repeatedly clicking "buy."
+
 ## Instructor personal courses + live sessions (migration 014)
 
 **File:** `supabase/migrations/014_instructor_personal_courses_and_live_sessions.sql`
