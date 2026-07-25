@@ -4,6 +4,7 @@ import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
 import { getLessonDetail } from "@/features/lms/services/lesson.service";
 import { LessonCompleteButton } from "@/features/lms/components/LessonCompleteButton";
+import { LanguageTaskCard } from "@/features/lms/components/LanguageTaskCard";
 
 interface ModuleClosing {
   optional_language_task?: string;
@@ -33,9 +34,9 @@ function VocabularyList({ vocabulary }: { vocabulary: { en: string; ar: string }
 
 function ModuleClosingCard({ closing }: { closing: ModuleClosing }) {
   const lang = "ar" as const;
+  // optional_language_task/coin_cost render interactively via
+  // LanguageTaskCard instead of as a passive row here.
   const rows: [string, string | number | undefined][] = [
-    [t("lms.languageTask", lang), closing.optional_language_task],
-    [t("lms.coinCost", lang), closing.coin_cost],
     [t("lms.dnaSkillsNote", lang), closing.career_dna_skills],
     [t("lms.seriesEpisode", lang), closing.series_episode],
     [t("lms.listeningSuggestion", lang), closing.listening_suggestion],
@@ -87,6 +88,22 @@ export default async function LessonPage({ params }: { params: { id: string; les
   const localized = lesson.translations[lang] || lesson.translations["en"] || {};
   const toolboxText = lang === "ar" ? content.toolbox_ar : content.toolbox_en;
 
+  let walletBalance = 0;
+  let languageTaskSubmitted = false;
+  if (user && content.module_closing?.optional_language_task) {
+    const [{ data: wallet }, { data: submission }] = await Promise.all([
+      supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle(),
+      supabase
+        .from("language_task_submissions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("lesson_id", lesson.id)
+        .maybeSingle(),
+    ]);
+    walletBalance = wallet?.balance ?? 0;
+    languageTaskSubmitted = !!submission;
+  }
+
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-3xl mx-auto">
       <Link href={`/courses/${lesson.course_id}`} className="text-sm text-ink-soft hover:text-navy mb-4 inline-block">
@@ -110,6 +127,19 @@ export default async function LessonPage({ params }: { params: { id: string; les
       {user && (
         <div className="mb-8">
           <LessonCompleteButton lessonId={lesson.id} completed={lesson.completed} />
+        </div>
+      )}
+
+      {user && content.module_closing?.optional_language_task && typeof content.module_closing.coin_cost === "number" && (
+        <div className="border border-line rounded-wow p-5 mb-8">
+          <h2 className="font-display font-bold text-navy text-sm mb-3">{t("lms.languageTask", lang)}</h2>
+          <LanguageTaskCard
+            lessonId={lesson.id}
+            taskText={content.module_closing.optional_language_task}
+            coinCost={content.module_closing.coin_cost}
+            initialBalance={walletBalance}
+            initialSubmitted={languageTaskSubmitted}
+          />
         </div>
       )}
 

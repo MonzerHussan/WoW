@@ -303,13 +303,31 @@ session:
   the owner authoring the 18 PMP Level 1 grammar points; (و) needed no
   change.
 
-**Task 2 (next)**: activate the coin wallet generally (not
-voice-specific) — real balance display on `/profile`, UI for the 3
-existing `coin_packages`, and a locally-simulated purchase flow
-(explicitly documented as temporary, no real payment gateway yet) that
-actually credits coins for testing, via a new security-definer
-function following the `spend_coins()` (007b) pattern — never trusting
-a client-supplied coin amount.
+**Language task submissions (done, tested — migrations 017-018)**: a
+separate, directly-commissioned piece of work, distinct from Task 2
+below — each PMP module's existing `optional_language_task` content
+(009 seed data, previously display-only) is now a real submission flow:
+`LanguageTaskCard` → `POST /api/lms/language-task/submit` → charges
+`coin_cost` via `spend_coins()` (007b) — **the first real call site for
+that function anywhere in the codebase** — then routes the same
+message through the existing `/api/agent` chat path for feedback, no
+second OpenAI call site. A real bug (not a design change) was found and
+fixed during this feature's own acceptance testing: an insufficient-
+balance rollback silently no-opped because 017 shipped with no DELETE
+policy at all; fixed in 018 with a narrowly-scoped DELETE policy (see
+SECURITY.md and ARCHITECTURE.md §11 for the full account). Verified
+live via REST with a real account's own JWT: correct debit (30→25),
+real `coin_transactions`/`language_task_submissions` rows, the 409
+duplicate guard, the 402 insufficient-balance path, the rollback fix
+itself (orphaned row deletable, paid row permanently protected), and a
+real agent feedback reply captured as evidence.
+
+**Task 2 (next, still not started)**: activate the coin wallet more
+generally — real balance display on `/profile` (the language-task work
+above only surfaces balance inline on the lesson page, not a dedicated
+wallet view), UI for the 3 existing `coin_packages`, and a
+locally-simulated purchase flow (explicitly documented as temporary, no
+real payment gateway yet) that actually credits coins for testing.
 
 **Task 3 (deferred to its own future session, by explicit product
 decision)**: real-time voice chat via the OpenAI Realtime API, on the

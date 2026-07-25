@@ -23,3 +23,9 @@ export const gradeAttemptSchema = z.object({
   note: z.string().max(1000).optional(),
 });
 export type GradeAttemptInput = z.infer<typeof gradeAttemptSchema>;
+
+export const submitLanguageTaskSchema = z.object({
+  lessonId: z.string().uuid(),
+  response: z.string().trim().min(20, "الرد قصير جدًا — حاول التوسّع أكثر").max(3000),
+});
+export type SubmitLanguageTaskInput = z.infer<typeof submitLanguageTaskSchema>;

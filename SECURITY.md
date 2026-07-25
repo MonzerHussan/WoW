@@ -41,6 +41,14 @@ call in RBAC.md, see DOMAIN_CONTRACTS.md §11. `gender` has no documented
 sensitivity decision at all and no claim is made about it here beyond
 today's RLS boundary.
 
+## Language task submissions — DELETE-policy rollback bug (migrations 017-018, 2026-07-25)
+
+**🟠 Insufficient-balance rollback silently no-opped, leaving orphaned "submitted" rows**
+**Files:** `supabase/migrations/017_language_task_submissions.sql`, `018_language_task_submission_delete_fix.sql`, `app/api/lms/language-task/submit/route.ts`
+**Was:** 017 shipped `language_task_submissions` with an INSERT and a SELECT policy only — deliberately no DELETE policy at all, on the reasoning that "a submission is permanent once made." The route itself inserts a submission row *before* calling `spend_coins()` (so the unique `(user_id, lesson_id)` constraint acts as the real anti-replay guard), and tries to `DELETE` that row as a rollback if the spend fails (insufficient balance). Because Postgres/PostgREST treat a DELETE matching zero RLS-visible rows as a successful no-op, not an error — the same failure class already documented in this file from Sprint 3.3's assessor-approve bug — that rollback silently did nothing. **This passed the route's own happy-path testing** and only surfaced when a real 402 (insufficient-balance) case was tested end-to-end: the "already submitted" row stayed behind with no corresponding `coin_transactions` entry, meaning the user would have been permanently locked out of that task (by the unique constraint) despite never actually paying for it.
+**Fixed:** 018 adds one DELETE policy, scoped as narrowly as the INSERT/SELECT policies already are: `user_id = auth.uid() and not exists (select 1 from coin_transactions where ref_table = 'language_task_submissions' and ref_id = language_task_submissions.id)`. A row can only be deleted by its own owner, and only if it was never actually paid for — a genuinely successful, paid submission remains permanently undeletable by anyone, preserving 017's original guarantee.
+**Verified live**, all via REST with the test account's own JWT: a real orphaned row (created by a genuine 402) deleted successfully post-fix (`200`, row returned in body); the same DELETE attempted against an already-*paid* row returned `200` with an **empty** body — RLS silently blocked it, and the row was confirmed still present immediately after. A clean resubmission of the same lesson (after restoring the test balance) then succeeded end-to-end: correct debit, new `language_task_submissions` + `coin_transactions` rows, and a real agent reply.
+
 ## Instructor personal courses + live sessions (migration 014)
 
 **File:** `supabase/migrations/014_instructor_personal_courses_and_live_sessions.sql`

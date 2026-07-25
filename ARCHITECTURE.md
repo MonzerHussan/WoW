@@ -310,3 +310,53 @@ points, employability) for exactly this reason.
 instructors). Organization-owned course management (`owner_type=
 'organization'`) has the same latent modules/lessons RLS gap but was
 out of scope for this pass — not touched.
+
+## 11. Language task submissions — first real `spend_coins()` call site (migrations 017-018)
+
+Each PMP Level 1 module's closing lesson carries an optional English
+`optional_language_task` inside `lessons.content->module_closing` (seed
+data, 009) — no `task_type` field exists to distinguish "write" from
+"record/prepare" prose; all six are answered as text, since there is no
+audio recording/upload capability anywhere in this project. This
+feature wires that field to a real submission flow, and is the first
+place `spend_coins()` (007b) is actually called from application code —
+still not wired into `/api/agent` itself, per the existing, deliberate
+deferral to the subscriptions sprint.
+
+```
+LanguageTaskCard (client, features/lms/) → POST
+/api/lms/language-task/submit → insert language_task_submissions
+(unique(user_id, lesson_id) is the real anti-replay guard) →
+spend_coins(auth.uid(), coin_cost, 'language_task',
+'language_task_submissions', <row id>) → on success, the client calls
+the existing sendAgentMessage() (features/agent/services/agent.client)
+— same /api/agent path Task 1 already grounds in catalog + DNA, no
+second OpenAI call site — wrapping the task text + the user's response
+into one feedback-request message.
+```
+
+`coin_cost` and the task text itself are read from `lessons.content`
+server-side inside the route on every request — never trusted from the
+client, same principle CLAUDE.md #4 already states for points.
+
+**A real bug was found and fixed during this feature's own acceptance
+testing, not a design change:** 017 shipped `language_task_submissions`
+with no DELETE policy at all ("a submission is permanent once made"),
+but the route's own insufficient-balance path tries to `DELETE` the
+just-inserted row as a rollback. Because PostgREST/Postgres treat a
+DELETE matching zero RLS-visible rows as success, not an error — the
+exact same failure class SECURITY.md already documents from the
+Sprint 3.3 assessor-approve bug — that rollback silently no-opped,
+leaving a real orphaned "submitted" row behind with no matching
+`coin_transactions` entry after a genuine 402. Confirmed live via a
+manually-lowered test balance. Fixed in 018 with a DELETE policy narrow
+enough to permit exactly the rollback case: a row is deletable by its
+owner only if no `coin_transactions` row references it — a submission
+that was actually paid for stays permanently undeletable, preserving
+017's original intent. Verified post-fix, all via real REST calls with
+the test account's own JWT: the orphaned row deleted successfully
+(200, row returned), a genuinely paid row's delete attempt returned
+200 with an empty body (RLS silently blocked it, row confirmed still
+present), and a clean resubmission of the same lesson after restoring
+balance succeeded end-to-end (balance debited correctly, new
+submission + `coin_transactions` rows, real agent feedback returned).
