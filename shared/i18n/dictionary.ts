@@ -444,6 +444,8 @@ export const dictionary = {
     vocabularyTitle: { ar: "مفردات هذا الدرس", en: "Lesson vocabulary" },
     toolboxTitle: { ar: "أدوات مدير المشروع", en: "Project manager's toolbox" },
     listen: { ar: "استماع", en: "Listen" },
+    grammarPointTitle: { ar: "نقطة قواعدية", en: "Grammar point" },
+    pronounceWord: { ar: "نطق", en: "Pronounce" },
     moduleClosingTitle: { ar: "لإنهاء هذه الوحدة", en: "To wrap up this module" },
     languageTask: { ar: "مهمة لغوية اختيارية", en: "Optional language task" },
     coinCost: { ar: "تكلفة (كوينز)", en: "Cost (coins)" },

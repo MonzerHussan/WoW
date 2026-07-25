@@ -298,10 +298,9 @@ session:
 - DOMAIN_CONTRACTS.md §10 (new): the "no official language-level
   equivalence" disclosure rule, added ahead of (ج)/(د)/(هـ) below so
   it exists before any UI references a language level.
-- (ج) coin-wallet-backed language opt-in and (د) TTS listening remain
-  separate future sessions; (هـ) grammar content remains blocked on
-  the owner authoring the 18 PMP Level 1 grammar points; (و) needed no
-  change.
+- (ج) coin-wallet-backed language opt-in remains a separate future
+  session; (و) needed no change. (د) and (هـ) are now both done — see
+  below.
 
 **Language task submissions (done, tested — migrations 017-018)**: a
 separate, directly-commissioned piece of work, distinct from Task 2
@@ -321,6 +320,44 @@ real `coin_transactions`/`language_task_submissions` rows, the 409
 duplicate guard, the 402 insufficient-balance path, the rollback fix
 itself (orphaned row deletable, paid row permanently protected), and a
 real agent feedback reply captured as evidence.
+
+**Lesson player language toggle fix (done, tested)**: a real bug found
+independently of any task above — the lesson player hardcoded `lang =
+"ar"` with no toggle at all, so `lessons.translations.en` and
+`toolbox_en` (both real, already in the 009 seed data) were completely
+unreachable. Fixed by splitting the page into a thin server data-fetch
+(`app/courses/[id]/lessons/[lessonId]/page.tsx`) and a new client
+component owning a real `useLang()` + `LangToggle`
+(`features/lms/components/LessonView.tsx`) — the same local-toggle
+pattern already used in onboarding/auth/instructor forms elsewhere in
+this codebase, not a new cross-app persisted-preference system (none
+exists yet). `LessonCompleteButton` had the same bug one level deeper
+(its own independent `useLang("ar")`, ignoring the page's toggle) and
+was fixed the same way.
+
+**TTS listening (د, done, tested)**: `shared/components/SpeakButton.tsx`
+wraps the free browser `SpeechSynthesis` API — no external TTS call, no
+coin cost, no audio storage. Wired into `LessonView`: a listen button
+next to the lesson title always speaks the raw English title
+regardless of the page's current AR/EN toggle; a second button next to
+the lesson body only appears in EN mode.
+
+**Grammar content (هـ, done, tested)**: all 18 PMP Level 1 grammar
+points (migration 019), authored directly by the product owner from
+each lesson's real topic/vocabulary — Claude Code's role was applying
+and verifying, not writing the content. Same `lessons.content` jsonb
+pattern as `module_closing`/`vocabulary`, no schema change. Rendered
+via a new `GrammarPointCard` in `LessonView`; each English example gets
+its own `SpeakButton`. `explanation_ar` is always Arabic regardless of
+the page's toggle, deliberately — verified live that toggling to EN
+switches the grammar point's title but leaves the Arabic explanation
+unchanged. Verified all 18 lessons independently via REST (not just
+the SQL editor's own per-statement feedback) both before migration 019
+(`grammar_point` null everywhere) and after (present, correct
+`title_en`, 3 examples, on every one of the 18 — and absent on the
+three unrelated non-PMP lessons, confirming no `UPDATE` touched
+anything outside its intended single row). This closes the English
+language-development initiative for PMP Level 1 opened in this sprint.
 
 **Task 2 (next, still not started)**: activate the coin wallet more
 generally — real balance display on `/profile` (the language-task work

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useLang } from "@/shared/hooks/useLang";
-import { TranslationKey } from "@/shared/i18n/translations";
+import { t, TranslationKey } from "@/shared/i18n/translations";
+import { Lang } from "@/shared/types";
 import { LangToggle } from "@/shared/components/LangToggle";
 import { SpeakButton } from "@/shared/components/SpeakButton";
 import { LessonCompleteButton } from "@/features/lms/components/LessonCompleteButton";
@@ -30,6 +31,37 @@ function VocabularyList({ vocabulary, t }: { vocabulary: { en: string; ar: strin
           <div key={i} className="flex justify-between border-b border-line/60 py-1">
             <span className="font-semibold text-ink">{v.ar}</span>
             <span className="text-ink-soft">{v.en}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface GrammarPoint {
+  title_en: string;
+  title_ar: string;
+  explanation_ar: string;
+  examples?: { en: string; ar: string }[];
+}
+
+function GrammarPointCard({ point, lang }: { point: GrammarPoint; lang: Lang }) {
+  if (!point) return null;
+  const title = lang === "en" ? point.title_en : point.title_ar;
+  return (
+    <div className="bg-orange/5 rounded-lg p-4 mb-6">
+      <h2 className="font-display font-bold text-navy text-sm mb-2">{t("lms.grammarPointTitle", lang)}</h2>
+      <p className="font-bold text-ink mb-2">{title}</p>
+      {/* explanation_ar is always Arabic regardless of lang — deliberate, not a bug. */}
+      <p className="text-sm text-ink leading-relaxed mb-3">{point.explanation_ar}</p>
+      <div className="flex flex-col gap-2">
+        {point.examples?.map((ex, i) => (
+          <div key={i} className="flex items-center justify-between gap-2 text-sm border-b border-line/40 py-1">
+            <span className="text-ink-soft">{ex.ar}</span>
+            <span className="flex items-center gap-2 font-semibold text-ink">
+              {ex.en}
+              <SpeakButton text={ex.en} lang="en-US" label={t("lms.pronounceWord", lang)} />
+            </span>
           </div>
         ))}
       </div>
@@ -91,6 +123,7 @@ export function LessonView({
     toolbox_en?: string;
     toolbox_ar?: string;
     module_closing?: ModuleClosing;
+    grammar_point?: GrammarPoint;
   };
   const localized = lesson.translations[lang] || lesson.translations["en"] || {};
   const toolboxText = lang === "ar" ? content.toolbox_ar : content.toolbox_en;
@@ -127,6 +160,8 @@ export function LessonView({
           <p className="text-sm text-ink">{toolboxText}</p>
         </div>
       )}
+
+      {content.grammar_point && <GrammarPointCard point={content.grammar_point} lang={lang} />}
 
       {content.vocabulary && <VocabularyList vocabulary={content.vocabulary} t={t} />}
 
