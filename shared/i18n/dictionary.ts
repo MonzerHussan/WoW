@@ -597,10 +597,10 @@ export const dictionary = {
   },
 
   placement: {
-    inviteTitle: { ar: "لنكتشف مستواك في الإنجليزية أولاً 🎯", en: "Let's find your English level first 🎯" },
+    inviteTitle: { ar: "لنتعارف أولاً 👋", en: "Let's get to know each other first 👋" },
     inviteBody: {
-      ar: "محادثة قصيرة وودّية مع وكيلك (مرة واحدة، مجانًا) يتعرّف فيها عليك ويقدّر مستواك — بلا امتحان وبلا درجات.",
-      en: "A short, friendly one-time chat with your agent (free) to get to know you and estimate your level — no exam, no grades.",
+      ar: "محادثة قصيرة وودّية مع وكيلك (مرة واحدة، مجانًا) — يتعرّف فيها على مستواك في الإنجليزية، ومسارك المهني، وأي شي تحب إخباره عن نفسك. بلا امتحان وبلا درجات.",
+      en: "A short, friendly one-time chat with your agent (free) — it gets to know your English level, your career path, and anything you'd like to tell it about yourself. No exam, no grades.",
     },
     inviteCta: { ar: "ابدأ المحادثة", en: "Start the conversation" },
     introBubble: {

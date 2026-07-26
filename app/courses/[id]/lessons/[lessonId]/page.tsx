@@ -3,8 +3,6 @@ import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
 import { getLessonDetail } from "@/features/lms/services/lesson.service";
 import { LessonView } from "@/features/lms/components/LessonView";
-import { getPlacementState } from "@/features/agent/services/agent.service";
-import { PlacementChat } from "@/features/agent/components/PlacementChat";
 
 export default async function LessonPage({ params }: { params: { id: string; lessonId: string } }) {
   const supabase = supabaseServer();
@@ -43,22 +41,12 @@ export default async function LessonPage({ params }: { params: { id: string; les
     languageTaskSubmitted = !!submission;
   }
 
-  // Cross-feature composition at the page level (features/agent inside
-  // features/lms's view) — same slot pattern as the dashboard's
-  // assistantSlot, keeping the two features decoupled.
-  const placement = user ? await getPlacementState(supabase, user.id) : null;
-
   return (
     <LessonView
       lesson={lesson}
       hasUser={!!user}
       walletBalance={walletBalance}
       languageTaskSubmitted={languageTaskSubmitted}
-      placementSlot={
-        placement ? (
-          <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang="ar" />
-        ) : undefined
-      }
     />
   );
 }

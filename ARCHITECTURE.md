@@ -499,7 +499,7 @@ suggestions, gating/unlocking the language layer, the floating agent)
 all depend on: a real stored level and a real durable memory.
 
 ```
-PlacementChat (client, features/agent/, composed into LessonView via a
+PlacementChat (client, features/agent/, composed into ProfileView via a
 placementSlot — the DashboardView assistantSlot pattern, deliberately
 not a sibling-feature import) → POST /api/agent/placement →
 [GUARD: user_language_profiles row exists? → 409 with stored level,
@@ -544,3 +544,35 @@ policies on `user_language_profiles` yet for exactly this reason.
 Known cosmetic limitation: the placement card is composed server-side
 with `lang="ar"`, so it does not follow the lesson page's client-side
 AR/EN toggle (same class of inconsistency as TECH_DEBT #13).
+
+**Update (relocation + prompt fix, 2026-07-26):** two follow-ups from
+the owner's own first real conversation.
+
+*Relocated from the lesson page to `/profile`.* The placement is now a
+general one-time introduction composed there (`app/profile/page.tsx` →
+`ProfileView`'s `placementSlot`), not tied to a specific lesson —
+`LessonView` no longer accepts or renders a `placementSlot` at all.
+Its scope grew to match: besides the English level, the conversation
+now explicitly asks about the learner's career path (current role/
+field, what they're aiming for on WOW), and `learner_notes` facts are
+described accordingly.
+
+*Prompt fix: the model was giving up on English too easily.* A real
+session showed the failure mode directly: the learner replied "لا
+افهم انجليزي، هل يمكنك التحدث بالعربية؟" and the agent switched fully
+into Arabic small talk with no further English elicitation at all —
+technically permitted by the original wording ("switch to Arabic for
+comfort and instructions") but never enforced continuing to ask for
+English afterward, so the rest of the conversation produced zero
+assessment evidence. `buildPlacementSystemPrompt` now makes this
+explicit: an Arabic-language first message is normal opening small
+talk, not evidence of struggle; a switch to Arabic instructions
+requires an explicit "I don't understand English" or two ignored
+invitations; and **every turn after switching must still end with one
+small, concrete English ask** — never pure Arabic chit-chat. Verified
+live by replaying the exact reported scenario: the same trigger phrase
+now produces `"لا مشكلة، سأساعدك باللغة العربية. لكن حاول أن تكتب
+جملة قصيرة بالإنجليزية إن أمكن، مثل \"My name is ...\" 🙂"` instead of
+abandoning English — and the conversation went on to gather real
+evidence (including a genuine grammar error, "I want learn english")
+and concluded with an honest level (A2) and career-path facts.

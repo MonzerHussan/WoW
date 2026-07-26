@@ -1,6 +1,5 @@
 "use client";
 
-import { ReactNode } from "react";
 import Link from "next/link";
 import { useLang } from "@/shared/hooks/useLang";
 import { t, TranslationKey } from "@/shared/i18n/translations";
@@ -132,16 +131,11 @@ export function LessonView({
   hasUser,
   walletBalance,
   languageTaskSubmitted,
-  placementSlot,
 }: {
   lesson: LessonDetail;
   hasUser: boolean;
   walletBalance: number;
   languageTaskSubmitted: boolean;
-  /** Composed at the page level (features/agent's PlacementChat) — same
-   *  slot pattern as DashboardView's assistantSlot, avoiding a sibling
-   *  feature import (the TECH_DEBT #14 mistake, not repeated). */
-  placementSlot?: ReactNode;
 }) {
   const { lang, setLang, dir, t } = useLang("ar");
 
@@ -188,10 +182,6 @@ export function LessonView({
           )}
         </div>
       )}
-
-      {/* The language layer starts here — the placement invitation (or
-          completed-level card) leads it for signed-in users. */}
-      {placementSlot}
 
       {/* Stated once per page rather than repeated under every widget:
           what the paid evaluation actually measures, and that no audio

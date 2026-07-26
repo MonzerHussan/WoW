@@ -423,13 +423,29 @@ conversation (capped at 15 notes). Key engineering: the once-only
 guard runs server-side BEFORE any OpenAI call (SECURITY.md); the
 OpenAI client/retry was extracted to `shared/lib/openai.ts` and the
 live `/api/agent` re-verified after the move; a forced-conclude nudge
-at ~7 exchanges stops a chatty model outgrowing the design; the
-placement card composes into the lesson page via a `placementSlot`
-(the `assistantSlot` pattern — not another sibling-feature import).
-Abandoned-conversation OpenAI cost exposure documented as TECH_DEBT
-#15 (launch-blocker severity). Re-placement to a higher level is a
+at ~7 exchanges stops a chatty model outgrowing the design. Abandoned-
+conversation OpenAI cost exposure documented as TECH_DEBT #15
+(launch-blocker severity). Re-placement to a higher level is a
 deferred owner decision, stated in the UI. Next phases build on this:
 lesson suggestions by level, language-layer gating, the floating agent.
+
+**Follow-up (done, tested, 2026-07-26)**, from the owner's own first
+real conversation: (1) diagnosed a reported "your agent is unavailable"
+error as a real client-side network failure (the dev server was down
+mid-rebuild during a concurrent session), not a rate limit or model
+failure — traced from the exact Arabic string, which only that catch
+path in the code can produce. (2) Fixed the assessment steering: the
+model was following the learner into pure Arabic small talk after a
+single "I don't understand English" and never asking for more English
+afterward, producing zero further assessment evidence — the prompt now
+requires a small concrete English ask on every turn even after
+switching to Arabic comfort, verified by replaying the exact reported
+trigger phrase. (3) Relocated the placement card from the lesson page
+to `/profile` as a general one-time introduction (`placementSlot`
+removed from `LessonView` entirely, added to `ProfileView`), and
+broadened its scope to explicitly ask about career path alongside
+English level — verified live that a fresh account's stored facts now
+include a real career-path fact ("يعمل في مجال المبيعات").
 
 **Task 3 (deferred to its own future session, by explicit product
 decision)**: real-time voice chat via the OpenAI Realtime API, on the
