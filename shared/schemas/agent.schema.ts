@@ -10,6 +10,12 @@ export const agentRequestSchema = z.object({
   // Cap history length server-side — a client cannot force the agent to
   // process an unbounded/expensive context window.
   history: z.array(historyMessageSchema).max(20).optional().default([]),
+  // Set by the floating agent when the user is reading a lesson, so the
+  // agent can actually answer questions about the material in front of
+  // them. Only the *id* crosses the wire — the route fetches the real
+  // content itself under RLS, so a client cannot inject arbitrary text
+  // into the system prompt, nor read a lesson it isn't entitled to.
+  lessonId: z.string().uuid().optional(),
 });
 export type AgentRequestInput = z.infer<typeof agentRequestSchema>;
 

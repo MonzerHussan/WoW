@@ -3,8 +3,9 @@ import { supabaseServer } from "@/shared/lib/supabase/server";
 import { Logo } from "@/shared/components/Logo";
 import { getProfileOverview } from "@/features/profile/services/profile.service";
 import { ProfileView } from "@/features/profile/components/ProfileView";
-import { getPlacementState } from "@/features/agent/services/agent.service";
+import { getPlacementState, getAgentInitialState } from "@/features/agent/services/agent.service";
 import { PlacementChat } from "@/features/agent/components/PlacementChat";
+import { FloatingAgent } from "@/features/agent/components/FloatingAgent";
 
 export default async function ProfilePage() {
   const supabase = supabaseServer();
@@ -14,9 +15,10 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login?redirectedFrom=/profile");
 
-  const [overview, placement] = await Promise.all([
+  const [overview, placement, agentState] = await Promise.all([
     getProfileOverview(supabase, user.id),
     getPlacementState(supabase, user.id),
+    getAgentInitialState(supabase, user.id),
   ]);
 
   return (
@@ -29,6 +31,11 @@ export default async function ProfilePage() {
         placementSlot={
           <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang="ar" />
         }
+      />
+      <FloatingAgent
+        userId={user.id}
+        initialChosenName={agentState.chosenName}
+        initialNeedsNaming={agentState.needsNaming}
       />
     </main>
   );

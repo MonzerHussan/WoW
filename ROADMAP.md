@@ -447,10 +447,44 @@ broadened its scope to explicitly ask about career path alongside
 English level — verified live that a fresh account's stored facts now
 include a real career-path fact ("يعمل في مجال المبيعات").
 
-**Task 3 (deferred to its own future session, by explicit product
-decision)**: real-time voice chat via the OpenAI Realtime API, on the
-same DNA+catalog grounding as Task 1, with per-minute `spend_coins()`
-billing and a documented prompt-caching cost warning.
+**Floating agent — parts 1-3 of 4 ✅ (2026-07-26).** Investigated
+first (no code) at the owner's request, then sized into two pieces and
+approved: the icon, the chat panel and the text button shipped
+together; the voice call stayed deferred.
+
+- Reachable from `/dashboard`, `/profile`, `/courses` and lesson pages,
+  composed per page (owner's decision — no `app/` reorganization now;
+  route-group alternative recorded as TECH_DEBT #16).
+- **Never rendered for a signed-out visitor**, server-side, not hidden
+  with CSS — verified by fetching the two public host pages with no
+  cookies: zero occurrences of the widget markup in HTML that otherwise
+  contained the full lesson.
+- **Lesson-aware on lesson pages.** Only `lessonId` is sent; the route
+  re-fetches the content under the caller's own RLS. Verified live on a
+  real lesson: the agent named the exact lesson title, its grammar
+  point, and all five vocabulary pairs — and, asked the identical
+  question from `/profile`, correctly said it had no lesson details
+  (server log `withLessonContext` true/false respectively).
+- **RLS boundary proven with one variable changed**: the same account
+  sending the same *locked* lesson id got no context before enrolling
+  and full context after.
+- New TECH_DEBT: #16 (per-page mounting), #17 (`ai_conversations` is
+  written but never read — the agent forgets every conversation on
+  reload, flagged by the owner as at odds with the "رفيق حقيقي"
+  intent), #18 (a mid-page language switch doesn't reach the widget
+  until reload — found during testing, not assumed).
+
+**Task 3 / floating agent part 4 (deferred to its own future session,
+by explicit product decision)**: real-time voice chat via the OpenAI
+Realtime API, on the same DNA+catalog grounding as Task 1, with
+per-minute `spend_coins()` billing and a documented prompt-caching cost
+warning. The investigation confirmed why it stays separate: no WebRTC/
+WebSocket dependency exists in the project, there is no metered
+"charge while running" billing anywhere (every current cost is a single
+per-event `spend_coins()` call), and a browser-side Realtime session
+needs a server-minted ephemeral credential so `OPENAI_API_KEY` never
+reaches the client. It also needs its own migration(s) and its own
+due-diligence pass before any code.
 
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal

@@ -59,6 +59,83 @@ async function getLessonNeighbors(supabase: SupabaseClient, courseId: string, le
   };
 }
 
+export interface LessonAgentContext {
+  title: string;
+  courseTitle: string;
+  bodyAr: string | null;
+  bodyEn: string | null;
+  vocabulary: { en: string; ar: string }[];
+  grammarPoint: { title: string; explanation: string } | null;
+  truncated: boolean;
+}
+
+// Hard caps, not suggestions: this block is prepended to EVERY message
+// the floating agent sends from a lesson page, so an unusually long
+// lesson body would otherwise inflate the cost of every single turn.
+const MAX_BODY_CHARS = 1200;
+const MAX_GRAMMAR_CHARS = 600;
+const MAX_VOCAB_ITEMS = 25;
+
+function clip(text: string | null | undefined, max: number): { value: string | null; clipped: boolean } {
+  if (!text) return { value: null, clipped: false };
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return { value: trimmed, clipped: false };
+  return { value: `${trimmed.slice(0, max)}…`, clipped: true };
+}
+
+/**
+ * The lesson the user is currently reading, shaped for the agent's
+ * system prompt (features/agent/prompt.ts `buildLessonContextBlock`).
+ *
+ * Deliberately a separate, narrower query from `getLessonDetail` — this
+ * one is called per agent *message*, not per page render, so it skips
+ * everything the agent has no use for (progress, quizzes, neighbors) and
+ * truncates the rest.
+ *
+ * Security note: the caller passes only a lesson id. Visibility is
+ * decided by the same RLS policy as everywhere else ("Lessons: enrolled
+ * or free preview"), so a user asking their agent about a lesson they
+ * can't open gets `null` here, and the agent simply has no lesson
+ * context — not a leak.
+ */
+export async function getLessonAgentContext(
+  supabase: SupabaseClient,
+  lessonId: string
+): Promise<LessonAgentContext | null> {
+  const { data: lesson } = await supabase
+    .from("lessons")
+    .select("title, content, translations, modules(courses(title))")
+    .eq("id", lessonId)
+    .maybeSingle();
+
+  if (!lesson) return null;
+
+  const translations = (lesson.translations as any) || {};
+  const content = (lesson.content as any) || {};
+
+  const ar = clip(translations.ar?.body, MAX_BODY_CHARS);
+  const en = clip(translations.en?.body, MAX_BODY_CHARS);
+  const grammarExplanation = clip(content.grammar_point?.explanation_ar, MAX_GRAMMAR_CHARS);
+
+  const allVocab: { en: string; ar: string }[] = Array.isArray(content.vocabulary) ? content.vocabulary : [];
+  const vocabulary = allVocab.slice(0, MAX_VOCAB_ITEMS);
+
+  return {
+    title: lesson.title,
+    courseTitle: (lesson.modules as any)?.courses?.title || "",
+    bodyAr: ar.value,
+    bodyEn: en.value,
+    vocabulary,
+    grammarPoint: content.grammar_point
+      ? {
+          title: content.grammar_point.title_ar || content.grammar_point.title_en || "",
+          explanation: grammarExplanation.value || "",
+        }
+      : null,
+    truncated: ar.clipped || en.clipped || grammarExplanation.clipped || allVocab.length > MAX_VOCAB_ITEMS,
+  };
+}
+
 /**
  * RLS ("Lessons: enrolled or free preview") already decides whether this
  * row is visible at all — a null result here means "locked", not "missing".

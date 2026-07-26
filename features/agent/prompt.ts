@@ -175,6 +175,56 @@ To register for a real course, the user goes to /courses (browse) or
 `;
 }
 
+interface LessonContext {
+  title: string;
+  courseTitle: string;
+  bodyAr: string | null;
+  bodyEn: string | null;
+  vocabulary: { en: string; ar: string }[];
+  grammarPoint: { title: string; explanation: string } | null;
+  truncated: boolean;
+}
+
+/**
+ * Appended only when the user is talking to the floating agent from
+ * inside a lesson page — the owner's explicit requirement that the agent
+ * be able to actually explain the material in front of the learner
+ * rather than answer about it in the abstract.
+ *
+ * The shape is declared locally rather than imported from
+ * `features/lms` on purpose: prompt.ts must not depend on a sibling
+ * feature (CLAUDE.md #1). Same approach already used for
+ * `CatalogCourse`/`EnrollmentSummary` above.
+ *
+ * Content arrives here already truncated by `getLessonAgentContext` —
+ * this block is sent with EVERY message from a lesson page, so its size
+ * is a per-turn cost, not a one-off.
+ */
+export function buildLessonContextBlock(ctx: LessonContext) {
+  const vocabLine = ctx.vocabulary.length
+    ? ctx.vocabulary.map((v) => `${v.en} = ${v.ar}`).join(" · ")
+    : "(none)";
+
+  return `
+# THE LESSON THE USER IS READING RIGHT NOW
+They opened their agent from inside this lesson page. Assume any vague
+question ("explain this", "what does this mean?", "I don't understand")
+is about THIS lesson unless they clearly say otherwise. Explain the
+material itself — you are their tutor for it, not just a career advisor.
+Never invent lesson content that isn't below; if they ask about a part
+you can't see, say so plainly and ask them to paste it.
+
+- Course: ${ctx.courseTitle}
+- Lesson: ${ctx.title}
+- Arabic body: ${ctx.bodyAr || "(none)"}
+- English body: ${ctx.bodyEn || "(none)"}
+- Vocabulary: ${vocabLine}
+- Grammar point: ${
+    ctx.grammarPoint ? `${ctx.grammarPoint.title} — ${ctx.grammarPoint.explanation}` : "(none)"
+  }
+${ctx.truncated ? "- NOTE: this lesson was too long to include in full; some of it is cut off. Say so if asked about a part you can't see.\n" : ""}`;
+}
+
 /** Extracts and removes a trailing \`\`\`rec ... \`\`\` block from a raw reply. */
 export function extractRecommendationBlock(reply: string): { text: string; recRaw: string | null } {
   const match = reply.match(/```rec\s*([\s\S]*?)```/);

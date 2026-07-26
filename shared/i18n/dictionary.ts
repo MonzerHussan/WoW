@@ -594,6 +594,12 @@ export const dictionary = {
       ar: "👋 اسألني عن أي شي يخص مسارك المهني، مهاراتك، أو الخطوة التالية.",
       en: "👋 Ask me anything about your career path, your skills, or your next step.",
     },
+    floatingOpen: { ar: "افتح محادثة وكيلك", en: "Open your agent" },
+    floatingClose: { ar: "إغلاق المحادثة", en: "Close chat" },
+    lessonAwareIntro: {
+      ar: "📖 أنا أرى هذا الدرس معك — اسألني عن أي جزء منه.",
+      en: "📖 I can see this lesson with you — ask me about any part of it.",
+    },
   },
 
   placement: {

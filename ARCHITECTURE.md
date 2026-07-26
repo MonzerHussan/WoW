@@ -576,3 +576,77 @@ now produces `"لا مشكلة، سأساعدك باللغة العربية. ل�
 abandoning English — and the conversation went on to gather real
 evidence (including a genuine grammar error, "I want learn english")
 and concluded with an honest level (A2) and career-path facts.
+
+## 15. The floating agent — reachable from anywhere, aware of the lesson you're on
+
+Phase B of the same language/agent layer. Three of the four parts the
+owner scoped (the icon on every page, the chat panel, the text button)
+shipped together here; the fourth — a real-time conversational **voice
+call** — stayed deferred as its own phase, because nothing in the
+codebase supports it yet (no WebRTC/WebSocket dependency, no metered
+per-minute billing anywhere, and a browser-side Realtime session needs
+a server-minted ephemeral credential so `OPENAI_API_KEY` never reaches
+the client — CLAUDE.md #5).
+
+```
+FloatingAgent (client, features/agent/) — FAB + panel, mounted per page
+  ├─ /dashboard, /profile               (middleware-protected)
+  ├─ /courses, /courses/*/lessons/*     (PUBLIC — user really can be null)
+  └─ lesson pages additionally pass lessonId
+        │
+        └→ sendAgentMessage(msg, history, { lessonId })
+              → POST /api/agent  { message, history, lessonId? }
+                   → zod: lessonId must be a uuid (400 otherwise, before OpenAI)
+                   → getLessonAgentContext(supabase, lessonId)   [RLS-scoped]
+                   → buildLessonContextBlock(...) appended to the system prompt
+```
+
+**Why it is not in `app/layout.tsx`.** The root layout is a pure Server
+Component with no client wrapper, and mounting there would mean deciding
+visibility by pathname — fragile, and re-decided on every new route. It
+is composed per page instead (the established `assistantSlot` /
+`placementSlot` pattern), and each host page already resolves the user
+server-side. The consequence is the security property the owner asked
+for: a signed-out visitor does not get the component *hidden*, they
+never receive it at all. Verified by fetching `/courses` and a
+free-preview lesson page with no cookies — zero occurrences of the
+widget's markup in HTML that otherwise rendered the full lesson.
+`/courses` and lesson pages are genuinely public (not in `middleware.ts`'s
+matcher), so both branch on `user` explicitly. The route-group
+alternative is TECH_DEBT #16.
+
+**Lesson awareness: only the id crosses the wire.** The client sends
+`lessonId`, never lesson text. The route re-fetches the content itself
+through the caller's own Supabase session, so the same
+`Lessons: enrolled or free preview` RLS policy that governs the lesson
+page governs what the agent can see — a client cannot inject arbitrary
+text into the system prompt, nor read a lesson it isn't entitled to.
+Proven with one variable changed and nothing else: the *same* account
+sending the *same* locked lesson id logged `withLessonContext:false` and
+answered "I have no information about specific lessons" before
+enrolling, then `withLessonContext:true` and named that lesson's exact
+grammar point (Present Perfect vs Past Simple) after enrolling.
+
+**Prompt size is a per-turn cost, not a one-off.** The lesson block is
+rebuilt and sent with *every* message from a lesson page, so
+`getLessonAgentContext` applies hard caps: 1200 chars per body (AR and
+EN separately), 600 for the grammar explanation, 25 vocabulary pairs,
+and it sets `truncated` so the agent can say plainly that it can't see
+the rest rather than inventing it. Measured against all 19 real lessons
+currently in the DB, the longest values are 415 / 557 / 317 chars and 5
+vocabulary pairs — every cap is comfortably clear of current content, so
+the truncation branch is **not exercised by any lesson that exists
+today** and is verified by code reading only, not by live data.
+
+**Known limitation, verified rather than assumed:** the widget follows
+the persisted AR/EN choice on every fresh page load, but not a switch
+made while the page is already open — each `useLang` instance reads
+localStorage once at mount and nothing notifies the others. Confirmed
+live (lesson player in EN, floating agent still Arabic; correct after
+reload) and tracked as TECH_DEBT #18 together with #13.
+
+**Not solved here:** the agent still forgets the conversation itself on
+reload. `ai_conversations` has been written to since Sprint 3 and has
+never been read back — see TECH_DEBT #17, which the owner flagged as
+directly at odds with the "رفيق حقيقي" intent and the natural next step
+after 022's durable memory.

@@ -5,11 +5,13 @@ import {
   buildAgentSystemPrompt,
   buildCatalogContextBlock,
   buildDnaContextBlock,
+  buildLessonContextBlock,
   buildStyleHint,
   extractRecommendationBlock,
 } from "@/features/agent/prompt";
 import { getEnrollmentContext } from "@/features/agent/services/agent.service";
 import { getPublishedCourses } from "@/features/lms/services/course.service";
+import { getLessonAgentContext } from "@/features/lms/services/lesson.service";
 import { agentRequestSchema, agentRecommendationSchema } from "@/shared/schemas/agent.schema";
 import { rateLimit } from "@/shared/lib/rate-limit";
 import { logger } from "@/shared/lib/logger";
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request" }, { status: 400 });
   }
-  const { message, history } = parsed.data;
+  const { message, history, lessonId } = parsed.data;
 
   const [
     { data: profile },
@@ -85,6 +87,7 @@ export async function POST(req: NextRequest) {
     { data: learnerNoteRows },
     publishedCourses,
     enrollments,
+    lessonContext,
   ] = await Promise.all([
     supabase.from("profiles").select("full_name, points, level, account_type, onboarding_goal, age, gender").eq("id", user.id).single(),
     supabase.from("user_agent_profiles").select("chosen_name").eq("user_id", user.id).maybeSingle(),
@@ -145,6 +148,10 @@ export async function POST(req: NextRequest) {
     // and falls back to its own training knowledge).
     getPublishedCourses(supabase),
     getEnrollmentContext(supabase, user.id),
+    // Only when the floating agent was opened from a lesson page. RLS
+    // decides visibility, so an id the caller isn't entitled to simply
+    // yields null and the prompt gets no lesson block at all.
+    lessonId ? getLessonAgentContext(supabase, lessonId) : Promise.resolve(null),
   ]);
 
   if (!profile) {
@@ -175,7 +182,8 @@ export async function POST(req: NextRequest) {
       weakSkills: (weakSkills || []).map((s: any) => ({ name: s.skills?.name || "", level: s.level })),
       latestEmployabilityScore: scores?.score ?? null,
       recentRecommendations: (recs || []).map((r: any) => r.payload?.message).filter(Boolean),
-    });
+    }) +
+    (lessonContext ? buildLessonContextBlock(lessonContext) : "");
 
   await supabase.from("ai_conversations").insert({ user_id: user.id, role: "user", message });
 
@@ -217,7 +225,12 @@ export async function POST(req: NextRequest) {
 
   await supabase.from("ai_conversations").insert({ user_id: user.id, role: "assistant", message: reply });
 
-  logger.info("agent_reply_sent", { userId: user.id, remaining: rl.remaining, wroteRecommendation: !!recRaw });
+  logger.info("agent_reply_sent", {
+    userId: user.id,
+    remaining: rl.remaining,
+    wroteRecommendation: !!recRaw,
+    withLessonContext: !!lessonContext,
+  });
 
   return NextResponse.json({ reply, agentName });
 }
