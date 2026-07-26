@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { submitLanguageTaskSchema } from "@/shared/schemas/lms.schema";
+import { resolveLanguageTask } from "@/features/lms/services/lesson.service";
 import { logger } from "@/shared/lib/logger";
 
 /**
@@ -9,9 +10,13 @@ import { logger } from "@/shared/lib/logger";
  *
  * First real call site for spend_coins() (007b) — still not wired to
  * /api/agent itself (deferred to the subscriptions sprint). The task
- * text and its coin cost are read from lessons.content->module_closing
- * here, server-side, never trusted from the client (same principle as
- * REASON_POINTS for points — CLAUDE.md #4).
+ * text and its coin cost are read from the lesson row here,
+ * server-side, never trusted from the client (same principle as
+ * REASON_POINTS for points — CLAUDE.md #4). `resolveLanguageTask`
+ * handles both shapes: content->language_task (023, cost 3) and the
+ * original content->module_closing->optional_language_task (009,
+ * cost 5). This is THE enforcement point for the price — the client
+ * only displays whatever number it was given.
  *
  * Order matters: insert the submission row first (its unique
  * (user_id, lesson_id) constraint is the actual anti-double-charge
@@ -60,15 +65,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Lesson not found or not accessible" }, { status: 403 });
   }
 
-  const moduleClosing = (lesson.content as any)?.module_closing as
-    | { optional_language_task?: string; coin_cost?: number }
-    | undefined;
-
-  if (!moduleClosing?.optional_language_task || typeof moduleClosing.coin_cost !== "number") {
+  const task = resolveLanguageTask(lesson.content);
+  if (!task) {
     return NextResponse.json({ error: "This lesson has no language task" }, { status: 400 });
   }
-  const taskText = moduleClosing.optional_language_task;
-  const coinCost = moduleClosing.coin_cost;
+  const { taskText, coinCost } = task;
 
   const { data: inserted, error: insertError } = await supabase
     .from("language_task_submissions")

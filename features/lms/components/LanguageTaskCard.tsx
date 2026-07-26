@@ -8,9 +8,14 @@ import { ErrorState } from "@/shared/components/Feedback";
 import { sendAgentMessage } from "@/features/agent/services/agent.client";
 
 /**
- * The interactive half of a module's closing content — everything else
- * (series_episode, listening_suggestion, career_dna_skills, capstone_task)
- * stays a passive display row in ModuleClosingCard. This is the first
+ * The lesson's writing task. Originally the interactive half of a
+ * module's closing content — everything else (series_episode,
+ * listening_suggestion, career_dna_skills, capstone_task) stays a
+ * passive display row in ModuleClosingCard. Since 023 most tasks come
+ * from `content.language_task` on ordinary mid-module lessons instead;
+ * either way this component only receives an already-resolved
+ * `taskText`/`coinCost` (see `resolveLanguageTask`) and never decides
+ * the price itself. This is the first
  * real spend_coins() (007b) call site: submit → /api/lms/language-task/submit
  * charges the coins server-side, then (only on success) the same message
  * is handed to the existing /api/agent chat path for feedback — no
@@ -70,7 +75,9 @@ export function LanguageTaskCard({
 
       try {
         const reply = await sendAgentMessage(
-          `مهمة اللغة الإنجليزية لهذه الوحدة:\n"${taskText}"\n\nردّي:\n${response}\n\nمن فضلك أعطني تغذية راجعة بالإنجليزية على القواعد والوضوح والمحتوى، بأسلوب مشجّع.`,
+          // "لهذا الدرس", not "لهذه الوحدة": since 023 most of these
+          // tasks belong to a single mid-module lesson, not a module ending.
+          `مهمة اللغة الإنجليزية لهذا الدرس:\n"${taskText}"\n\nردّي:\n${response}\n\nمن فضلك أعطني تغذية راجعة بالإنجليزية على القواعد والوضوح والمحتوى، بأسلوب مشجّع.`,
           []
         );
         setFeedback(reply);

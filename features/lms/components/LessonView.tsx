@@ -9,7 +9,7 @@ import { SpeakButton } from "@/shared/components/SpeakButton";
 import { LessonCompleteButton } from "@/features/lms/components/LessonCompleteButton";
 import { LanguageTaskCard } from "@/features/lms/components/LanguageTaskCard";
 import { PronunciationPractice } from "@/features/lms/components/PronunciationPractice";
-import { LessonDetail } from "@/features/lms/services/lesson.service";
+import { LessonDetail, resolveLanguageTask } from "@/features/lms/services/lesson.service";
 
 type Translate = (key: TranslationKey) => string;
 
@@ -148,6 +148,9 @@ export function LessonView({
   };
   const localized = lesson.translations[lang] || lesson.translations["en"] || {};
   const toolboxText = lang === "ar" ? content.toolbox_ar : content.toolbox_en;
+  // content.language_task (023, any lesson) or the original
+  // module_closing.optional_language_task (009, the 6 module endings).
+  const languageTask = resolveLanguageTask(lesson.content);
 
   return (
     <main dir={dir} className="min-h-screen px-5 pb-10 max-w-3xl mx-auto">
@@ -211,13 +214,13 @@ export function LessonView({
         </div>
       )}
 
-      {hasUser && content.module_closing?.optional_language_task && typeof content.module_closing.coin_cost === "number" && (
+      {hasUser && languageTask && (
         <div className="border border-line rounded-wow p-5 mb-8">
           <h2 className="font-display font-bold text-navy text-sm mb-3">{t("lms.languageTask")}</h2>
           <LanguageTaskCard
             lessonId={lesson.id}
-            taskText={content.module_closing.optional_language_task}
-            coinCost={content.module_closing.coin_cost}
+            taskText={languageTask.taskText}
+            coinCost={languageTask.coinCost}
             initialBalance={walletBalance}
             initialSubmitted={languageTaskSubmitted}
             lang={lang}

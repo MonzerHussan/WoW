@@ -59,6 +59,53 @@ async function getLessonNeighbors(supabase: SupabaseClient, courseId: string, le
   };
 }
 
+export interface ResolvedLanguageTask {
+  taskText: string;
+  coinCost: number;
+  /** Which shape it came from — the UI uses this to decide whether the module-closing framing applies. */
+  source: "language_task" | "module_closing";
+}
+
+/**
+ * One resolver for the two shapes a lesson's writing task can take, so
+ * the page, the view and the API route cannot drift apart on which one
+ * wins or what it costs.
+ *
+ * `content.language_task` (023) is the current shape: a task at the root
+ * of `content`, for any lesson. `content.module_closing
+ * .optional_language_task` (009) is the original one, kept for the 6
+ * lessons that genuinely are module endings — those rows were
+ * deliberately not migrated, so both shapes are live and this fallback
+ * is permanent, not transitional.
+ *
+ * The root key wins if both are somehow present. Migration 023 asserts
+ * no lesson has both, so that branch should never be reachable; it is
+ * defined here only so the outcome is decided rather than accidental.
+ *
+ * The coin cost is whatever the database says (3 for the 023 tasks, 5
+ * for the module-closing ones) — never a constant in the client, per
+ * CLAUDE.md #4.
+ */
+export function resolveLanguageTask(content: unknown): ResolvedLanguageTask | null {
+  const c = (content as any) || {};
+
+  const direct = c.language_task;
+  if (direct?.prompt && typeof direct.coin_cost === "number") {
+    return { taskText: direct.prompt, coinCost: direct.coin_cost, source: "language_task" };
+  }
+
+  const closing = c.module_closing;
+  if (closing?.optional_language_task && typeof closing.coin_cost === "number") {
+    return {
+      taskText: closing.optional_language_task,
+      coinCost: closing.coin_cost,
+      source: "module_closing",
+    };
+  }
+
+  return null;
+}
+
 export interface LessonAgentContext {
   title: string;
   courseTitle: string;

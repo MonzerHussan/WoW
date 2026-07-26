@@ -316,6 +316,11 @@ out of scope for this pass — not touched.
 
 ## 11. Language task submissions — first real `spend_coins()` call site (migrations 017-018)
 
+> Superseded in part by §16: since migration 023 this is only one of
+> **two** live task shapes, and readers go through `resolveLanguageTask`
+> rather than reading `module_closing` directly. Everything below about
+> the submission/charge/rollback flow itself is unchanged.
+
 Each PMP Level 1 module's closing lesson carries an optional English
 `optional_language_task` inside `lessons.content->module_closing` (seed
 data, 009) — no `task_type` field exists to distinguish "write" from
@@ -650,3 +655,57 @@ reload. `ai_conversations` has been written to since Sprint 3 and has
 never been read back — see TECH_DEBT #17, which the owner flagged as
 directly at odds with the "رفيق حقيقي" intent and the natural next step
 after 022's durable memory.
+
+## 16. Every lesson gets a writing task — the second task shape (migration 023)
+
+Phase (و) of the language layer. The 6 tasks that existed since 009
+covered only module-ending lessons; the owner authored 12 more, one per
+remaining PMP Level 1 lesson, each drilling **that lesson's own** grammar
+point and vocabulary rather than being generic practice.
+
+**Why a second shape rather than reusing the first.** The original tasks
+live at `content.module_closing.optional_language_task` and belong
+there — those 6 lessons genuinely end a module, and the UI renders a
+"لإنهاء هذه الوحدة" card for them. Filing the new 12 under the same key
+would have made that closing card appear on mid-module lessons: a
+semantic error, not a cosmetic one. So 023 writes a new root key,
+`content.language_task = {prompt, coin_cost}`, valid on any lesson, and
+the 6 old rows were deliberately **not** migrated — no rewrite of data
+real users have already submitted against, and
+`language_task_submissions.task_text_snapshot` keeps matching what those
+users were actually shown.
+
+Both shapes are therefore live and permanent. One resolver decides
+between them:
+
+```
+resolveLanguageTask(content)          // features/lms/services/lesson.service.ts
+  → content.language_task             (023, any lesson, 3 coins)
+  ?? content.module_closing.optional_language_task   (009, 6 endings, 5 coins)
+  → { taskText, coinCost, source } | null
+```
+
+It is used by all three readers — the lesson page (whether to prefetch
+wallet/submission state), `LessonView` (whether to render the card), and
+`/api/lms/language-task/submit` (**the price enforcement point**) — so
+they cannot drift on which task wins or what it costs. The client never
+decides the cost; it only displays the number the server gave it
+(CLAUDE.md #4).
+
+**The migration verifies itself.** An `UPDATE` whose `WHERE` matches
+nothing is not an error in Postgres — the same silent-no-op class that
+018 had to fix for `DELETE`. A title typo would have quietly left a
+lesson without its task. 023 ends with a `DO` block that raises unless
+exactly 12 lessons carry `language_task`, exactly 6 still carry the
+original `module_closing` task, and **zero** carry both. The disjointness
+was also checked against live data before the file was written: the 12
+target lessons have no `module_closing` object at all.
+
+**Dashboard cleanup shipped alongside.** The fixed `AgentChat` card was
+removed from `/dashboard` by owner decision now that the floating agent
+(§15) reaches the agent from everywhere — two chat surfaces on one page,
+each with its own separate history, confused more than they helped.
+`DashboardView`'s `assistantSlot` prop went with it rather than being
+left as an optional prop nobody passes; `ProfileView`'s `placementSlot`
+still demonstrates the same composition pattern if the dashboard ever
+needs an in-page panel again.

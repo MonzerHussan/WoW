@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
@@ -10,11 +9,14 @@ import { PointsCard } from "./PointsCard";
 import { BadgesList } from "./BadgesList";
 
 /**
- * `assistantSlot` keeps this feature decoupled from features/agent —
- * cross-feature composition happens in app/dashboard/page.tsx, per the
- * import-direction rule in CODING_GUIDELINES.md.
+ * This view used to take an `assistantSlot` holding a fixed AgentChat
+ * card (the cross-feature composition pattern still used by
+ * ProfileView's `placementSlot`). The prop was removed with the card
+ * itself when the floating agent replaced it — an optional prop nobody
+ * passes is just drift. Re-adding it is a two-line change if the
+ * dashboard ever needs to host an in-page panel again.
  */
-export async function DashboardView({ assistantSlot }: { assistantSlot?: ReactNode }) {
+export async function DashboardView() {
   const supabase = supabaseServer();
 
   const {
@@ -81,8 +83,6 @@ export async function DashboardView({ assistantSlot }: { assistantSlot?: ReactNo
 
         <BadgesList badges={(badges as any) || []} lang={lang} />
       </div>
-
-      {assistantSlot}
     </main>
   );
 }

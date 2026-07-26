@@ -474,6 +474,33 @@ together; the voice call stayed deferred.
   intent), #18 (a mid-page language switch doesn't reach the widget
   until reload — found during testing, not assumed).
 
+**المرحلة (و) — كل درس صار له مهمة كتابة ✅ (2026-07-26, migration 023).**
+المالك كتب 12 مهمة جديدة، واحدة لكل درس بقي بلا مهمة، كل واحدة تُدرّب
+النقطة القواعدية ومفردات درسها تحديداً.
+
+- **شكل ثانٍ للمهمة، لا نقل للقديم**: `content.language_task` في جذر
+  `content` (أي درس، 3 كوينز) إلى جانب
+  `content.module_closing.optional_language_task` الأصلي (الـ6 نهايات
+  وحدات، 5 كوينز). الستة لم تُلمس — لا إعادة كتابة لبيانات سلّم عليها
+  مستخدمون فعلاً. السبب دلالي: وضع الـ12 تحت `module_closing` كان
+  سيُظهر بطاقة "لإنهاء هذه الوحدة" في دروس لا تُنهي شيئاً.
+- `resolveLanguageTask()` واحدة يستخدمها القرّاء الثلاثة (صفحة الدرس،
+  `LessonView`، ومسار التسليم الذي هو نقطة فرض السعر) فلا يختلفون.
+- الـmigration **يتحقق من نفسه**: كتلة `DO` ترفع استثناءً ما لم يكن 12
+  جديدة + 6 قديمة سليمة + **صفر ازدواج** — لأن `UPDATE` لا يطابق شيئاً
+  ليس خطأً في Postgres (نفس صنف الصمت الذي أصلحه 018 للـ`DELETE`).
+- **تحقق فعلي على الـ18 درساً كلها** عبر HTML المُقدَّم من الخادم بجلسة
+  حقيقية: بطاقة مهمة واحدة بالضبط في كل درس، 3 كوينز على الـ12 و5 على
+  الـ6، وبطاقة "لإنهاء هذه الوحدة" تظهر **فقط** على الـ6 (صفر على
+  الـ12). والـ12 عرضت 12 نصاً مختلفاً — لا مهمة عامة مكررة.
+- **تسليمان حقيقيان بحساب حقيقي**: المحفظة 30 → 27 → 22، أي **−3 على
+  الشكل الجديد و−5 على القديم بالضبط**، مع صفَّي
+  `language_task_submissions` بـ`coin_cost` 3 و5 ولقطتَي نص مختلفتين،
+  وصفَّي `coin_transactions` مربوطَين بمعرّف كل تسليم.
+- **بطاقة `AgentChat` الثابتة حُذفت من `/dashboard`** بقرار المالك بعد
+  وصول الوكيل العائم (سطحان بسجلَّين منفصلين يربكان)، وحُذف معها
+  `assistantSlot` من `DashboardView` بدل تركه prop لا يمرّره أحد.
+
 **Task 3 / floating agent part 4 (deferred to its own future session,
 by explicit product decision)**: real-time voice chat via the OpenAI
 Realtime API, on the same DNA+catalog grounding as Task 1, with

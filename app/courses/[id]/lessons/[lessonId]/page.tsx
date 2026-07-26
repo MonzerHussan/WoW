@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
-import { getLessonDetail } from "@/features/lms/services/lesson.service";
+import { getLessonDetail, resolveLanguageTask } from "@/features/lms/services/lesson.service";
 import { LessonView } from "@/features/lms/components/LessonView";
 import { getAgentInitialState } from "@/features/agent/services/agent.service";
 import { FloatingAgent } from "@/features/agent/components/FloatingAgent";
@@ -25,11 +25,14 @@ export default async function LessonPage({ params }: { params: { id: string; les
     );
   }
 
-  const content = lesson.content as { module_closing?: { optional_language_task?: string } };
+  // Only decides whether the wallet/submission lookups are worth doing —
+  // the same resolver the view and the API route use, so a lesson can't
+  // render a task the page didn't prefetch state for.
+  const hasLanguageTask = !!resolveLanguageTask(lesson.content);
 
   let walletBalance = 0;
   let languageTaskSubmitted = false;
-  if (user && content.module_closing?.optional_language_task) {
+  if (user && hasLanguageTask) {
     const [{ data: wallet }, { data: submission }] = await Promise.all([
       supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle(),
       supabase
