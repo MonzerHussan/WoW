@@ -87,6 +87,8 @@ interface DnaContext {
   age: number | null;
   gender: string | null;
   reasonForJoining: string | null;
+  englishLevel: string | null;
+  learnerNotes: string[];
   topSkills: { name: string; level: number | null }[];
   weakSkills: { name: string; level: number | null }[];
   latestEmployabilityScore: number | null;
@@ -108,6 +110,10 @@ export function buildDnaContextBlock(ctx: DnaContext) {
 - Active capabilities: ${ctx.capabilities.length ? ctx.capabilities.join(", ") : "none yet"}
 - Age: ${ctx.age ?? "not stated"} · Gender: ${ctx.gender || "not stated"}
 - Reason they joined WOW: ${ctx.reasonForJoining || "not stated"}
+- English level (from their one-time placement conversation): ${ctx.englishLevel ?? "not assessed yet"}
+- Things this learner has told you about themselves (remember and use these): ${
+    ctx.learnerNotes.length ? ctx.learnerNotes.map((n) => `«${n}»`).join(" · ") : "nothing recorded yet"
+  }
 - Strengths (highest documented skill levels): ${
     ctx.topSkills.length ? ctx.topSkills.map((s) => `${s.name}${s.level ? ` (level ${s.level}/5)` : ""}`).join(", ") : "none yet"
   }
@@ -174,4 +180,64 @@ export function extractRecommendationBlock(reply: string): { text: string; recRa
   const match = reply.match(/```rec\s*([\s\S]*?)```/);
   if (!match) return { text: reply.trim(), recRaw: null };
   return { text: reply.replace(match[0], "").trim(), recRaw: match[1].trim() };
+}
+
+/**
+ * The ONE-TIME English placement conversation — a different job from the
+ * general agent, so a different system prompt entirely (the owner's
+ * explicit instruction: do not reuse /api/agent's prompt for this).
+ * Same identity though: it's the learner's own named agent talking.
+ */
+export function buildPlacementSystemPrompt(agentName: string) {
+  return `You are ${agentName}, the user's personal AI agent inside the WOW (World of Work) platform.
+
+# YOUR JOB IN THIS CONVERSATION (and only this)
+You are conducting a short, friendly ENGLISH placement chat — 5 to 8
+exchanges — to estimate this learner's English level before they start
+the platform's English-learning content. This is a warm get-to-know-you
+conversation, never an exam.
+
+# HOW TO ASSESS
+- Speak English. Start simple; step difficulty up or down based on how
+  they actually reply.
+- Judge from evidence in their replies: vocabulary range, grammatical
+  structures, sentence length, and the kinds of errors they make.
+- Also get to know them as a person: ask about themselves, their goals,
+  and what they'd like you to remember about them.
+- If they clearly struggle even with very simple English, switch to
+  Arabic for comfort and instructions while still inviting short English
+  answers. The goal is assessment, never embarrassment.
+- Keep each of your turns short (2-4 sentences, one question at a time).
+
+# WHEN TO CONCLUDE
+After 5-8 exchanges — or immediately when told the conversation reached
+its length limit — wrap up warmly (tell them their level and one
+encouraging sentence about it), and END your final reply with exactly
+one fenced block in this exact format:
+
+\`\`\`placement
+{"level":"A2","summary":"...","facts":["...","..."]}
+\`\`\`
+
+Rules for the block:
+- "level": exactly one of A1, A2, B1, B2, C1, C2 — your honest estimate
+  from the evidence above, never inflated to be nice.
+- "summary": 2-4 sentences IN ARABIC describing what you observed
+  (strengths, typical errors, comfort level). This is stored permanently
+  as your placement record.
+- "facts": up to 10 short standalone facts IN ARABIC the learner told
+  you about themselves worth remembering long-term (goals, background,
+  preferences). Only things they actually said — never inferred traits.
+- Do not mention the block or its JSON to the user; your visible reply
+  must read naturally without it.
+- Never emit this block before you have enough evidence (at least 4
+  learner replies), unless told the length limit was reached.
+`;
+}
+
+/** Extracts and removes a trailing \`\`\`placement ... \`\`\` block — same pattern as extractRecommendationBlock. */
+export function extractPlacementBlock(reply: string): { text: string; placementRaw: string | null } {
+  const match = reply.match(/```placement\s*([\s\S]*?)```/);
+  if (!match) return { text: reply.trim(), placementRaw: null };
+  return { text: reply.replace(match[0], "").trim(), placementRaw: match[1].trim() };
 }

@@ -489,3 +489,58 @@ explicit spec at the time ("`lesson.title` بالإنجليزي دائماً، �
 `localized.title`"). Switching it to `localized.title` (and showing it
 only in EN) is a later product decision by the owner, not a regression
 being corrected.
+
+## 14. Agent-led language layer, phase A: English placement (migration 022)
+
+The owner's direction for the language layer: the agent assesses the
+learner's level, remembers them, and proposes suitable lessons — the
+learner decides. This phase is the foundation the later phases (lesson
+suggestions, gating/unlocking the language layer, the floating agent)
+all depend on: a real stored level and a real durable memory.
+
+```
+PlacementChat (client, features/agent/, composed into LessonView via a
+placementSlot — the DashboardView assistantSlot pattern, deliberately
+not a sibling-feature import) → POST /api/agent/placement →
+[GUARD: user_language_profiles row exists? → 409 with stored level,
+ BEFORE the rate limiter and BEFORE any OpenAI call] →
+rate limit (15 msgs/10min, own key, reusing shared/lib/rate-limit) →
+buildPlacementSystemPrompt (features/agent/prompt.ts — a different job
+from the general agent, so a different prompt entirely) →
+callAgentWithRetry (shared/lib/openai.ts) →
+extractPlacementBlock: the agent ends its final reply with a fenced
+```placement {"level","summary","facts"} block (the exact ```rec
+pattern) → zod-validate → insert user_language_profiles +
+learner_notes(source='placement') → { completed: true, level }
+```
+
+**Why the guard order is load-bearing:** the conversation is free and
+once-only by owner decision. A completed user costs one indexed SELECT
+per attempt — never a model invocation. The table's PRIMARY KEY on
+`user_id` backstops the race the pre-check can't see (two parallel
+tabs): the losing insert hits 23505 and is returned as the same 409.
+What the guard deliberately does NOT cover — abandoned, never-completed
+conversations that restart forever — is a real OpenAI cost exposure
+bounded only by the in-memory rate limiter, tracked as TECH_DEBT #15
+with launch-blocker severity.
+
+**Durable memory begins here.** Until 022, everything a learner told
+the agent lived in the client-held 20-message history and died with the
+page. Now `learner_notes` (append-only; no UPDATE/DELETE policies) and
+`english_level` are injected into the general agent's DNA context block
+on every `/api/agent` conversation — capped at the 15 most recent notes
+so the prompt can't grow without bound. `source='conversation'` is
+reserved for later phases where ordinary chats also write notes.
+
+**Extraction, not duplication:** the OpenAI client and its retry logic
+(15s timeout, one retry, gpt-4o) moved verbatim from
+`app/api/agent/route.ts` to `shared/lib/openai.ts` when the placement
+route became a second caller. `/api/agent`'s behavior is unchanged and
+was re-verified live after the move, not just recompiled.
+
+**Deferred by explicit owner decision, not forgotten:** re-placement
+("test up to a higher level") — the UI says so; there are no UPDATE
+policies on `user_language_profiles` yet for exactly this reason.
+Known cosmetic limitation: the placement card is composed server-side
+with `lang="ar"`, so it does not follow the lesson page's client-side
+AR/EN toggle (same class of inconsistency as TECH_DEBT #13).

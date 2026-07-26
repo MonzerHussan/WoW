@@ -29,6 +29,26 @@ export async function getAgentInitialState(supabase: SupabaseClient, userId: str
   };
 }
 
+export interface PlacementState {
+  placed: boolean;
+  englishLevel: string | null;
+}
+
+/**
+ * Whether this user has completed the one-time English placement (022).
+ * The server-side 409 guard in /api/agent/placement is the real
+ * enforcement — this just decides which UI to show.
+ */
+export async function getPlacementState(supabase: SupabaseClient, userId: string): Promise<PlacementState> {
+  const { data } = await supabase
+    .from("user_language_profiles")
+    .select("english_level")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return { placed: !!data, englishLevel: data?.english_level ?? null };
+}
+
 export interface AgentEnrollmentContext {
   courseId: string;
   courseTitle: string;

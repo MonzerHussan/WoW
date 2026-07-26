@@ -408,6 +408,29 @@ limit on repeat purchases, a real payment gateway must replace this
 before real Beta traffic; see the dedicated launch-blocker section in
 TECH_DEBT.md.
 
+**Agent-led language layer, phase A — English placement (done, tested —
+migration 022)**: the foundation for the owner's redirection of the
+whole language layer (agent assesses, remembers, proposes; learner
+decides). A one-time free English placement conversation with the
+learner's own named agent: 5-8 friendly exchanges assessed from real
+evidence (vocabulary, structures, errors), concluded by a fenced
+```placement block (the ```rec pattern) that writes
+`user_language_profiles` (level A1-C2 + Arabic summary, once-only via
+PK) and `learner_notes` (durable facts, append-only) — the first real
+cross-session agent memory; until now everything the learner said died
+with the page. Both now feed the general agent's context on every
+conversation (capped at 15 notes). Key engineering: the once-only
+guard runs server-side BEFORE any OpenAI call (SECURITY.md); the
+OpenAI client/retry was extracted to `shared/lib/openai.ts` and the
+live `/api/agent` re-verified after the move; a forced-conclude nudge
+at ~7 exchanges stops a chatty model outgrowing the design; the
+placement card composes into the lesson page via a `placementSlot`
+(the `assistantSlot` pattern — not another sibling-feature import).
+Abandoned-conversation OpenAI cost exposure documented as TECH_DEBT
+#15 (launch-blocker severity). Re-placement to a higher level is a
+deferred owner decision, stated in the UI. Next phases build on this:
+lesson suggestions by level, language-layer gating, the floating agent.
+
 **Task 3 (deferred to its own future session, by explicit product
 decision)**: real-time voice chat via the OpenAI Realtime API, on the
 same DNA+catalog grounding as Task 1, with per-minute `spend_coins()`

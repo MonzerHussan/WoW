@@ -596,6 +596,30 @@ export const dictionary = {
     },
   },
 
+  placement: {
+    inviteTitle: { ar: "لنكتشف مستواك في الإنجليزية أولاً 🎯", en: "Let's find your English level first 🎯" },
+    inviteBody: {
+      ar: "محادثة قصيرة وودّية مع وكيلك (مرة واحدة، مجانًا) يتعرّف فيها عليك ويقدّر مستواك — بلا امتحان وبلا درجات.",
+      en: "A short, friendly one-time chat with your agent (free) to get to know you and estimate your level — no exam, no grades.",
+    },
+    inviteCta: { ar: "ابدأ المحادثة", en: "Start the conversation" },
+    introBubble: {
+      ar: "سولّف معي شوي بالإنجليزي 🙂 ابدأ بأي تحية بسيطة — مثلاً \"Hi!\" — وجاوب براحتك، مو امتحان.",
+      en: "Chat with me a little in English 🙂 start with any simple greeting — like \"Hi!\" — and answer at your own pace. It's not a test.",
+    },
+    placeholder: { ar: "اكتب ردّك بالإنجليزية...", en: "Type your reply in English..." },
+    completedTitle: { ar: "🎉 تم تحديد مستواك:", en: "🎉 Your level is set:" },
+    yourLevel: { ar: "مستواك في الإنجليزية", en: "Your English level" },
+    retestLater: {
+      ar: "إعادة التقييم لمستوى أعلى ستتاح لاحقًا.",
+      en: "Re-assessment to a higher level will be available later.",
+    },
+    alreadyPlaced: {
+      ar: "أنجزت محادثة تحديد المستوى من قبل.",
+      en: "You've already completed your placement conversation.",
+    },
+  },
+
   instructor: {
     instructorOnly: {
       ar: "هذه الصفحة مخصّصة للأساتذة المفعَّلين فقط.",

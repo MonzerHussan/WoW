@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { callAgentWithRetry } from "@/shared/lib/openai";
 import {
   buildAgentSystemPrompt,
   buildCatalogContextBlock,
@@ -24,40 +24,11 @@ import { AccountType } from "@/shared/types";
 // directly the agent-uptime metric TESTING_POLICY.md's Beta gate checks.
 export const maxDuration = 30;
 
-let openai: OpenAI | null = null;
-function getOpenAI() {
-  if (!openai) openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return openai;
-}
+// The OpenAI client + retry logic used to live inline here; extracted to
+// shared/lib/openai.ts unchanged once the placement route became a second
+// caller.
 
 const RATE_LIMIT = { limit: 20, windowMs: 10 * 60 * 1000 }; // 20 messages / 10 min / user
-const OPENAI_TIMEOUT_MS = 15_000;
-const MAX_RETRIES = 1;
-
-async function callAgentWithRetry(messages: any[]) {
-  let lastErr: unknown;
-
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
-
-    try {
-      const completion = await getOpenAI().chat.completions.create(
-        { model: "gpt-4o", messages, temperature: 0.7, max_tokens: 700 },
-        { signal: controller.signal }
-      );
-      clearTimeout(timeout);
-      return completion.choices[0]?.message?.content || "";
-    } catch (err) {
-      clearTimeout(timeout);
-      lastErr = err;
-      logger.warn("agent_call_failed", { attempt, error: String(err) });
-      if (attempt === MAX_RETRIES) break;
-    }
-  }
-
-  throw lastErr;
-}
 
 /**
  * POST /api/agent
@@ -110,6 +81,8 @@ export async function POST(req: NextRequest) {
     { data: weakSkills },
     { data: scores },
     { data: recs },
+    { data: languageProfile },
+    { data: learnerNoteRows },
     publishedCourses,
     enrollments,
   ] = await Promise.all([
@@ -150,6 +123,23 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    // Language layer (022): the placement result and the learner's own
+    // durable notes. Both are safely null/empty for users who haven't
+    // done the placement yet (or before 022 runs — the ignored error
+    // just leaves data null, same as any other missing optional row).
+    supabase
+      .from("user_language_profiles")
+      .select("english_level")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    // Capped at the 15 most recent so a long-lived learner history can't
+    // grow the prompt without bound.
+    supabase
+      .from("learner_notes")
+      .select("note")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(15),
     // Real catalog grounding (fixes the "recommends Udemy/Coursera"
     // bug — without this, the model has zero idea WOW has real courses
     // and falls back to its own training knowledge).
@@ -179,6 +169,8 @@ export async function POST(req: NextRequest) {
       age: profile.age,
       gender: genderOption?.ar || null,
       reasonForJoining: goalOption?.ar || profile.onboarding_goal,
+      englishLevel: languageProfile?.english_level ?? null,
+      learnerNotes: (learnerNoteRows || []).map((n: any) => n.note as string),
       topSkills: (skills || []).map((s: any) => ({ name: s.skills?.name || "", level: s.level })),
       weakSkills: (weakSkills || []).map((s: any) => ({ name: s.skills?.name || "", level: s.level })),
       latestEmployabilityScore: scores?.score ?? null,
