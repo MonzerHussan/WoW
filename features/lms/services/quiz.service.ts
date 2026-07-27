@@ -20,10 +20,12 @@ export interface QuizForTaking {
 
 /**
  * Server-side only (uses supabaseServer — never exposed to a client
- * component). Strips `question.correct_index` before returning, per the
- * RLS comment on quiz_questions: "correct answers must be stripped
- * server-side before sending to clients in auto mode" — we strip
- * unconditionally since every mode still needs an unbiased attempt.
+ * component). Still strips `question.correct_index` defensively, but as
+ * of migration 028 there is nothing left to strip: the key was moved out
+ * to `quiz_answer_keys` (RLS on, zero policies) and physically removed
+ * from the `question` jsonb, so no query — through this service or
+ * straight to PostgREST — returns it any more. The strip stays as a
+ * belt-and-braces guard in case a future seed reintroduces the field.
  */
 export async function getQuizForTaking(
   supabase: SupabaseClient,

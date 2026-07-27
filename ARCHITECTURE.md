@@ -145,7 +145,8 @@ Catalog (/courses, public) → Course page (/courses/[id]) → enroll
 POST /api/lms/lessons/complete (RLS-gated read proves the lesson was
 actually visible to this user before granting LESSON_COMPLETE points)
 → Quiz (/courses/[id]/quizzes/[quizId]) → POST /api/lms/quizzes/submit
-(server-side scoring; correct_index never sent to the client)
+(scoring happens inside submit_quiz_attempt(); the answer key is not
+readable by any client role — see §18)
 → auto mode: immediate pass/fail + DNA effects
 → human/hybrid mode: pending, routed to /assessor/queue →
 POST /api/lms/quizzes/grade (assessor-only) → DNA effects
@@ -782,3 +783,47 @@ it any permission gate on this platform would have been decorative,
 including 015b/015c's curriculum-review governance. The related `points`/`level` self-award remains open because
 `awardPoints` writes those through the user's own session; see
 SECURITY.md and TECH_DEBT.
+
+
+## 18. The quiz answer key is a property of the data, not of a route (migration 028)
+
+ARCHITECTURE.md used to say "correct_index never sent to the client",
+and the submit route did strip it. That statement was true about the
+**route** and false about the **data**: `quiz_questions.question` was one
+jsonb holding `{text, options[], correct_index}`, so a plain
+`GET /rest/v1/quiz_questions?select=question` handed the full key to any
+enrolled student. Demonstrated end to end while testing 027 — a test
+account read all 18 keys, scored 100%, and had the attempt approved.
+Hybrid review was never a mitigation: an assessor sees a score, and a
+perfectly cheated attempt looks like the strongest possible pass.
+
+RLS grants or denies a whole row and cannot hide one key inside a column,
+so the column had to change:
+
+```
+quiz_answer_keys(question_id, correct_index)   RLS on, ZERO policies
+                                               → unreadable by any client role
+quiz_questions.question                        correct_index physically removed
+                                               → `select *` no longer contains it
+
+submit_quiz_attempt(quiz_id, answers)  [security definer]
+   ├─ re-checks enrollment by hand (definer bypasses RLS)
+   ├─ one-attempt rule, in the same transaction as the insert
+   ├─ compares answers against quiz_answer_keys internally
+   └─ returns ONLY {attempt_id, score, pending_review, passed}
+```
+
+**The route no longer scores anything**, and that is the structural
+point: comparing in TypeScript *required* the key to be readable by the
+caller's own session. Grading moved to the one place that can see the key
+and will not hand it back.
+
+The returned payload deliberately carries no per-question breakdown —
+that would let a caller recover the key by diffing attempts, which would
+reopen the hole through a narrower door.
+
+Two residues worth knowing: `009_seed_pmp_level1.sql` still contains the
+key inline (old migrations are never edited), so a fresh database must
+run 009 **then** 028 — 028's self-check fails loudly if the field is ever
+present again, and `quiz.service.ts` keeps a defensive strip as a second
+net.

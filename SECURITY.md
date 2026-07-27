@@ -294,7 +294,7 @@ The last column of the same family. `profiles.points`/`level` were writable from
 
 **Verified live, not asserted:** a real lesson completion moved points 10 → 20 with the flag set; four direct `PATCH` shapes were refused **403 / 42501** with values unchanged on independent read; replaying the RPC on an already-paid lesson returned `false` and changed nothing; a hybrid attempt did not auto-pay; and the assessor path still paid a second account 0 → 20 on a genuinely passed attempt.
 
-## CRITICAL, OPEN: the quiz answer key is readable by any enrolled student (found 2026-07-27)
+## Quiz answer key isolated — CLOSED (migration 028, 2026-07-27)
 
 Found while testing 027, and demonstrated end to end rather than reasoned about. `quiz_questions.question` is one jsonb holding `{text, options[], correct_index}`. The submit route strips `correct_index` before sending questions to the browser — ARCHITECTURE.md says "correct_index never sent to the client" — but that is a property of the route, not of the data. A plain `GET /rest/v1/quiz_questions?select=question` returns the whole object, key included, to any student enrolled in the course.
 
@@ -302,7 +302,16 @@ Reproduced with a fresh test account: read all 18 keys, submitted them through t
 
 Hybrid review does not mitigate it — the assessor sees a score, and a cheated attempt presents as the strongest possible pass. Same shape as the points and role holes: a careful route, and a direct PostgREST path that bypasses it.
 
-RLS cannot hide part of a column, so the fix needs a data-shape decision — either move the key to its own table with no client read policy, or revoke client `select` on `quiz_questions` and serve a sanitized view. Tracked as TECH_DEBT #25; **must be settled before any real certificate is issued**.
+**Fixed in 028, as a property of the data rather than of a route.** RLS cannot hide part of a column, so the column had to change:
+
+1. `quiz_answer_keys(question_id, correct_index)` — RLS enabled with **zero policies**. No policy means no client role can read a single row; the security-definer function runs as the table owner and is the only thing that can. Same "no policy is the policy" pattern 024 used for pricing writes, applied here to reads.
+2. `correct_index` was **physically deleted** from every `question` jsonb (`question - 'correct_index'`), after being copied across. It is no longer hidden behind a check — it is not in the row.
+3. `submit_quiz_attempt(p_quiz_id, p_answers)` does the grading inside the database and returns **only an aggregate score** — deliberately no per-question breakdown, which would let a caller recover the key by diffing attempts. It also re-implements the enrollment check by hand (SECURITY DEFINER bypasses RLS) and moves the one-attempt-per-quiz rule into the same transaction as the insert, closing a race the route previously had between its SELECT and its INSERT.
+4. The submit route no longer reads questions or scores anything. That is the structural point: scoring in TypeScript *required* the key to be readable by the caller's session.
+
+**Verified live:** a direct read of `quiz_answer_keys` returns `[]`; all 18 question objects now expose exactly `options,text`; the embedded-join bypass `select=id,quiz_answer_keys(correct_index)` returns `null`; the exact cheat that worked before now yields nothing to cheat with; correct answers through the real route still score **100**, wrong answers **0.00**; and the hybrid assessor path still paid a fresh account **0 → 20** on the approved attempt while the unapproved 0% one stayed at 0.
+
+**Known residue:** `009_seed_pmp_level1.sql` still contains `correct_index` inside its jsonb, per the never-edit-old-migrations rule. Re-seeding a fresh database therefore needs 009 **then** 028; 028's self-check fails loudly if the key is ever present again, and `quiz.service.ts` keeps a defensive strip as a second net.
 
 ## Fixed during this audit
 
