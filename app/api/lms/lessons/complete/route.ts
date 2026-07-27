@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { completeLessonSchema } from "@/shared/schemas/lms.schema";
-import { awardPoints } from "@/shared/services/points.service";
+import { awardLessonPoints } from "@/shared/services/points.service";
 import { logger } from "@/shared/lib/logger";
 
 /**
@@ -80,7 +80,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await awardPoints(supabase, user.id, "LESSON_COMPLETE");
+    // Since 027 the payout goes through award_lesson_points(), which
+    // re-verifies the lesson_progress row this route just wrote and
+    // refuses a second payout for the same lesson. profiles.points is
+    // no longer writable from a client session at all.
+    const result = await awardLessonPoints(supabase, user.id, lessonId);
     logger.info("lesson_completed", { userId: user.id, lessonId });
     return NextResponse.json({ alreadyCompleted: false, ...result });
   } catch (err) {

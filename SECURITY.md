@@ -280,6 +280,30 @@ The working guard uses a trigger because RLS `WITH CHECK` cannot compare against
 
 **Audit trail.** Both functions write to the existing `audit_log` (003) rather than a new pricing-specific table. `audit_log` had been created with RLS, indexes and a comment stating that inserts happen via SECURITY DEFINER functions only — but nothing had ever written to it; these are its first real writers. `target_id` is a uuid, so a `pricing_units` key (text) travels in `metadata` with `target_id` null, while a coin-package change uses `target_id` properly. The table's `num_nonnulls(actor_user_id, actor_system_id) = 1` check is satisfied because `has_permission` already proved `auth.uid()` resolves to a real profile — an anonymous caller can never reach the insert.
 
+## Points/level hardening — TECH_DEBT #20 closed (migration 027, 2026-07-27)
+
+The last column of the same family. `profiles.points`/`level` were writable from any client session through the column-blind self-update policy — verified live before the fix (`{"points":999999,"level":99}` succeeded, reverted immediately). 025/026 deliberately could not cover them, because `awardPoints` wrote them through the user's own session; locking first would have broken lesson and quiz rewards outright. 027 does both halves in one migration: create the verified write paths, then close the column.
+
+**Why not one generic `award_points(p_reason)`.** A reason-based function callable by `authenticated` is a *worse* hole than the one being closed: today a user could set their total once to an arbitrary number, but a generic RPC would let them mint `PMP_LEVEL_COMPLETE` (100 points) on repeat, indefinitely, and it would look like ordinary traffic. 013's `award_quiz_points` already established the correct shape and 027 follows it — **one function per real event**, each verifying the event and each idempotent via a persisted `points_awarded` flag taken under a row lock.
+
+- `award_lesson_points(p_lesson_id)` — verifies a `lesson_progress` row for `auth.uid()` with `completed = true`, sets `points_awarded` under `for update`. No `p_user` parameter exists, so a caller can only ever pay themselves.
+- `award_quiz_points(p_attempt_id)` — same signature as 013, **extended not forked**. Branch A (unchanged) is the assessor confirming an attempt they graded. Branch B (new) is the auto-graded path: the caller's own passed attempt on an `assessment_mode = 'auto'` quiz with `graded_by is null`. A hybrid/human quiz cannot pay out through branch B.
+- Existing completed lessons were backfilled to `points_awarded = true`, so the migration cannot retroactively pay for past work or let anyone claim it twice.
+- The 026 guard was extended to `points`/`level`, still **SECURITY INVOKER**, with the 025 lesson restated in the file and asserted (`prosecdef = false`) in a `DO` block.
+- `/api/points/award` was retired (410 Gone). It paid out any `REASON_POINTS` key with no check that the event occurred — trusting the *reason* while Sprint 1 had already established it must not trust the *amount*. It had zero callers.
+
+**Verified live, not asserted:** a real lesson completion moved points 10 → 20 with the flag set; four direct `PATCH` shapes were refused **403 / 42501** with values unchanged on independent read; replaying the RPC on an already-paid lesson returned `false` and changed nothing; a hybrid attempt did not auto-pay; and the assessor path still paid a second account 0 → 20 on a genuinely passed attempt.
+
+## CRITICAL, OPEN: the quiz answer key is readable by any enrolled student (found 2026-07-27)
+
+Found while testing 027, and demonstrated end to end rather than reasoned about. `quiz_questions.question` is one jsonb holding `{text, options[], correct_index}`. The submit route strips `correct_index` before sending questions to the browser — ARCHITECTURE.md says "correct_index never sent to the client" — but that is a property of the route, not of the data. A plain `GET /rest/v1/quiz_questions?select=question` returns the whole object, key included, to any student enrolled in the course.
+
+Reproduced with a fresh test account: read all 18 keys, submitted them through the real route, scored **100%**, and the attempt was then approved by a real assessor and paid out.
+
+Hybrid review does not mitigate it — the assessor sees a score, and a cheated attempt presents as the strongest possible pass. Same shape as the points and role holes: a careful route, and a direct PostgREST path that bypasses it.
+
+RLS cannot hide part of a column, so the fix needs a data-shape decision — either move the key to its own table with no client read policy, or revoke client `select` on `quiz_questions` and serve a sanitized view. Tracked as TECH_DEBT #25; **must be settled before any real certificate is issued**.
+
 ## Fixed during this audit
 
 ### 🔴 CRITICAL — Client-controlled point awarding

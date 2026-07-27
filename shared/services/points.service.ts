@@ -1,67 +1,119 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { REASON_POINTS, PointsReason } from "@/shared/constants/points";
 import { auditLog } from "@/shared/lib/logger";
 
 /**
- * Server-side only. Awards points to a user for a known, server-verified
- * reason, recalculates their level, and unlocks any badges whose
- * points_value threshold has been crossed.
+ * Points are awarded ONLY through the verified security-definer functions
+ * added in 027 (`award_lesson_points`, `award_quiz_points`). Since that
+ * migration, `profiles.points` and `profiles.level` cannot be written from
+ * a client session at all — a direct PATCH is refused with 42501.
  *
- * Level formula: level = floor(points / 100) + 1  (tune as needed)
+ * What changed and why: this module used to compute the new total in
+ * TypeScript and `UPDATE profiles` through the caller's own session. That
+ * worked, but it left the same write path open to anyone with a session
+ * and a REST client — verified live, `{"points":999999,"level":99}`
+ * succeeded. The amount now lives in SQL next to the event check, so a
+ * caller cannot choose the reason, the amount, or the recipient.
  *
- * Unchanged in behavior from the original lib/points.ts — only relocated
- * and switched to read amounts from the shared REASON_POINTS map instead
- * of a caller-supplied number, per the Sprint 1 security fix.
+ * Badges are deliberately still awarded from here: `user_badges` has its
+ * own "owner inserts own" policy (013) and no privileged column is
+ * involved, so there is nothing to escalate.
  */
-export async function awardPoints(supabase: SupabaseClient, userId: string, reason: PointsReason) {
-  const amount = REASON_POINTS[reason];
 
-  const { data: profile, error: profileError } = await supabase
+export interface PointsOutcome {
+  /** False when the event was already paid out, or never happened. */
+  awarded: boolean;
+  points: number;
+  level: number;
+  newBadges: { id: string; name: string }[];
+}
+
+/**
+ * LESSON_COMPLETE payout for a lesson this user genuinely completed. The
+ * function verifies the `lesson_progress` row itself and refuses a second
+ * payout for the same lesson, so calling it twice is safe — the second
+ * call just returns false.
+ */
+export async function awardLessonPoints(
+  supabase: SupabaseClient,
+  userId: string,
+  lessonId: string
+): Promise<PointsOutcome> {
+  const { data, error } = await supabase.rpc("award_lesson_points", { p_lesson_id: lessonId });
+  if (error) throw new Error(error.message);
+  return finish(supabase, userId, data === true, "LESSON_COMPLETE");
+}
+
+/**
+ * QUIZ_COMPLETE payout for a passed attempt. Used by BOTH quiz paths —
+ * the auto-graded one (the student's own pass) and the assessor-confirmed
+ * one — because 027 extended the single 013 function to accept either
+ * rather than forking it. `quiz_attempts.points_awarded` keeps it to one
+ * payout no matter which branch fires.
+ */
+export async function awardQuizPoints(
+  supabase: SupabaseClient,
+  userId: string,
+  attemptId: string
+): Promise<PointsOutcome> {
+  const { data, error } = await supabase.rpc("award_quiz_points", { p_attempt_id: attemptId });
+  if (error) throw new Error(error.message);
+  return finish(supabase, userId, data === true, "QUIZ_COMPLETE");
+}
+
+/**
+ * Reads back the authoritative total the function just wrote and unlocks
+ * any badge whose threshold it crossed.
+ *
+ * Badge selection is now "every unearned badge at or below the current
+ * total" rather than the old before/after delta window. Simpler and
+ * strictly more correct: it self-heals if a badge was ever missed, and it
+ * does not depend on knowing the previous balance — which this module no
+ * longer computes.
+ */
+async function finish(
+  supabase: SupabaseClient,
+  userId: string,
+  awarded: boolean,
+  reason: string
+): Promise<PointsOutcome> {
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("points, level")
     .eq("id", userId)
     .single();
 
-  if (profileError || !profile) {
-    throw new Error(profileError?.message || "Profile not found");
-  }
+  if (error || !profile) throw new Error(error?.message || "Profile not found");
 
-  const newPoints = profile.points + amount;
-  const newLevel = Math.floor(newPoints / 100) + 1;
-  const leveledUp = newLevel > profile.level;
+  const newBadges = awarded ? await syncBadges(supabase, userId, profile.points) : [];
 
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ points: newPoints, level: newLevel })
-    .eq("id", userId);
+  auditLog("points_awarded", {
+    userId,
+    reason,
+    awarded,
+    points: profile.points,
+    level: profile.level,
+    newBadges: newBadges.length,
+  });
 
-  if (updateError) throw new Error(updateError.message);
+  return { awarded, points: profile.points, level: profile.level, newBadges };
+}
 
-  const { data: eligibleBadges } = await supabase
+async function syncBadges(supabase: SupabaseClient, userId: string, points: number) {
+  const { data: eligible } = await supabase
     .from("badges")
     .select("id, name, points_value")
-    .lte("points_value", newPoints)
-    .gt("points_value", profile.points);
+    .lte("points_value", points);
 
-  const newlyEarned: { id: string; name: string }[] = [];
+  if (!eligible?.length) return [];
 
-  if (eligibleBadges && eligibleBadges.length > 0) {
-    for (const badge of eligibleBadges) {
-      const { data: existing } = await supabase
-        .from("user_badges")
-        .select("badge_id")
-        .eq("user_id", userId)
-        .eq("badge_id", badge.id)
-        .maybeSingle();
+  const { data: held } = await supabase.from("user_badges").select("badge_id").eq("user_id", userId);
+  const heldIds = new Set((held || []).map((b: any) => b.badge_id));
 
-      if (!existing) {
-        await supabase.from("user_badges").insert({ user_id: userId, badge_id: badge.id });
-        newlyEarned.push({ id: badge.id, name: badge.name });
-      }
-    }
+  const earned: { id: string; name: string }[] = [];
+  for (const badge of eligible) {
+    if (heldIds.has(badge.id)) continue;
+    const { error } = await supabase.from("user_badges").insert({ user_id: userId, badge_id: badge.id });
+    if (!error) earned.push({ id: badge.id, name: badge.name });
   }
-
-  auditLog("points_awarded", { userId, reason, amount, newPoints, newLevel, leveledUp });
-
-  return { points: newPoints, level: newLevel, leveledUp, newBadges: newlyEarned, reason };
+  return earned;
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { quizSubmitSchema } from "@/shared/schemas/lms.schema";
-import { awardPoints } from "@/shared/services/points.service";
+import { awardQuizPoints } from "@/shared/services/points.service";
 import { recordQuizPassSkills, recomputeEmployabilityScore } from "@/features/lms/services/dna.service";
 import { logger } from "@/shared/lib/logger";
 
@@ -108,7 +108,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await awardPoints(supabase, user.id, "QUIZ_COMPLETE");
+    // 027: the auto-graded path now claims its points through the same
+    // award_quiz_points() function the assessor path uses — it accepts
+    // this branch only when the attempt is the caller's own, passed, on
+    // an assessment_mode='auto' quiz, and not already paid out.
+    await awardQuizPoints(supabase, user.id, attempt.id);
     await recordQuizPassSkills(supabase, user.id, quizId, attempt.id, score, { type: "system", id: null });
     await recomputeEmployabilityScore(supabase, user.id);
   } catch (err) {

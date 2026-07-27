@@ -1,45 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/shared/lib/supabase/server";
-import { awardPoints } from "@/shared/services/points.service";
-import { pointsAwardSchema } from "@/shared/schemas/points.schema";
-import { logger } from "@/shared/lib/logger";
+import { NextResponse } from "next/server";
 
 /**
- * POST /api/points/award
- * Body: { reason: string }  — reason must be one of REASON_POINTS' keys.
+ * RETIRED in migration 027. Returns 410 Gone.
  *
- * The point AMOUNT is never accepted from the client (fixed as a critical
- * vuln in Sprint 1) — validation of the `reason` shape itself is now done
- * via zod (Sprint 1.5) instead of an ad hoc lookup-and-check.
+ * This route accepted any key from `REASON_POINTS` and paid it out with
+ * no check that the underlying event had actually happened — it trusted
+ * the *reason* even though Sprint 1 had already established that it must
+ * never trust the *amount*. Nothing in the app ever called it (verified
+ * before retiring it: zero client callers).
+ *
+ * Since 027, points can only be written by a security-definer function
+ * that verifies one specific real event and refuses to pay twice for it:
+ *   - award_lesson_points(lesson_id)  — checks the lesson_progress row
+ *   - award_quiz_points(attempt_id)   — checks a real passed attempt
+ * `profiles.points`/`level` are otherwise unwritable from any client
+ * session, so this handler could not function even if it were kept.
+ *
+ * Deliberately an explicit 410 rather than a deletion: a silent 404 would
+ * read as a routing mistake, and anything still pointing here should fail
+ * loudly with a reason. The reasons that have no verified award path yet
+ * (COURSE_COMPLETE, PMP_LEVEL_COMPLETE, FIRST_JOB_APPLICATION,
+ * PROFILE_COMPLETED) each need their own event check before they can pay
+ * out — see shared/constants/points.ts.
  */
-export async function POST(req: NextRequest) {
-  const supabase = supabaseServer();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
-
-  const parsed = pointsAwardSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Unknown or missing reason" }, { status: 400 });
-  }
-
-  try {
-    const result = await awardPoints(supabase, user.id, parsed.data.reason as any);
-    return NextResponse.json(result);
-  } catch (err: any) {
-    logger.error("points_award_failed", { userId: user.id, error: String(err) });
-    return NextResponse.json({ error: "Failed to award points" }, { status: 500 });
-  }
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        "This endpoint is retired. Points are awarded only by server-verified events (migration 027).",
+    },
+    { status: 410 }
+  );
 }
