@@ -242,6 +242,44 @@ through a new, explicitly-scoped policy or security-definer function —
 not a broad DELETE grant — for the same reason `content.manage`'s
 UPDATE policy exists instead of just handing out row ownership.
 
+## CRITICAL: privilege escalation via self-UPDATE on `profiles` (migration 025, 2026-07-26)
+
+**Found while building 024, reproduced live against the real project — not a theoretical review finding.** An ordinary test account (`role='user'`) escalated itself to `admin` with a single request:
+
+```
+PATCH /rest/v1/profiles?id=eq.<own id>  {"role":"content_manager"}   -> 200
+POST  /rest/v1/rpc/has_permission       {"perm":"content.manage"}    -> true
+PATCH /rest/v1/profiles?id=eq.<own id>  {"role":"admin"}             -> 204
+PATCH /rest/v1/profiles?id=eq.<own id>  {"role":"super_admin"}       -> 400 (blocked)
+```
+
+Only `super_admin` was refused, by the 003 trigger `guard_super_admin_promotion`, which guards that single value and nothing else. `admin` carries `users.manage`, `content.manage`, `content.moderate`, `roles.assign`, `audit.read`.
+
+**Root cause:** `schema.sql`'s policy `on public.profiles for update using (auth.uid() = id)` is column-blind — it correctly prevents editing another user's row, but places no restriction on which of your own columns you may write, and `role` is one of them.
+
+**Blast radius beyond 024:** the curriculum-review governance shipped in 015b/015c has gated the owner's decisive vote on `content.manage` since it shipped; that gate was bypassable the whole time. 024's pricing functions gate on the same permission.
+
+**Fixed in 025 + 026 — 025 alone did NOT work.** 025 installed a `BEFORE UPDATE` trigger but declared the function `SECURITY DEFINER`, which makes `current_user` report the *function owner* (postgres) rather than the calling session role. Its early-out `if current_user not in ('authenticated','anon') then return new` therefore evaluated true on every call and the guard returned before checking anything — inert in exactly the case it existed for. Caught by re-running the same escalation test after 025 was applied: all four PATCHes still returned **204** and the columns really changed (`role → admin`, `status → suspended`, `identity_verified_at` set), then were reverted. 026 drops and recreates the function as **SECURITY INVOKER** (the default) so `current_user` reports the real effective role, and restates the condition positively so an unrecognised role fails toward "trusted context" instead of silently disabling the guard for end users. 026 asserts `prosecdef = false` and the trigger's presence in a `DO` block, so the bug cannot come back unnoticed.
+
+The working guard uses a trigger because RLS `WITH CHECK` cannot compare against `OLD` — also the pattern 003 already used. `role`, `status` and `identity_verified_at` are unchangeable from a client session; `service_role`, the SQL editor and SECURITY DEFINER functions are deliberately unaffected. Verified safe against every client-session writer of `profiles` in the codebase first.
+
+**Lesson worth keeping:** `SECURITY DEFINER` is load-bearing for functions that must *act* with elevated rights, and actively harmful for a trigger that must *inspect who is acting*. A guard that silently allows everything looks identical to a guard that works, until it is actually tested against a real attempt.
+
+**STILL OPEN — `points`/`level` self-award.** The same column-blind policy lets a user PATCH their own `points` and `level` (verified: `points=999999, level=99` succeeded; the test row was reverted immediately). 025 does **not** lock these, because `shared/services/points.service.ts` `awardPoints` writes them through the user's own session — locking them would break lesson completion and quiz rewards outright. This is the same bug class as the original client-controlled points hole that CLAUDE.md rule #4 says must never return: the API route was fixed, but the direct PostgREST path bypasses the route entirely. Proper fix: move `awardPoints` into a security-definer function, as `award_quiz_points` (013) already is, then extend the 025 trigger to cover both columns. Tracked in TECH_DEBT with launch-blocker severity.
+
+## Central pricing functions (migration 024, 2026-07-26)
+
+`pricing_units` has **no INSERT/UPDATE/DELETE policy at all** — with RLS enabled, every direct write from a normal session is refused regardless of caller, and the two security-definer functions are the only door. Same "never a broad RLS write for a money-touching table" rule as `spend_coins`/`credit_coins`.
+
+- `update_pricing_unit(p_key text, p_new_cost int)` — verifies `has_permission('finance.edit_rates')` (the real one-argument signature; there is no `has_permission(uuid, text)` overload), rejects negative/null costs, writes an `audit_log` row on every successful change including no-op changes, and raises `42501` on refusal so a denial is loud and distinguishable from "key not found" (which returns `false`).
+- `update_coin_package_price(p_package_id uuid, p_new_price numeric)` — same checks, deliberately a **separate** function. A single generic function taking a table name would be an injection surface and would apply one permission check to tables nobody reviewed.
+- Both `revoke execute ... from anon`, matching the 007b `spend_coins` precedent.
+- `/api/admin/pricing` validates shape with zod but is **not** the security boundary — the check lives in the functions, so a future caller cannot bypass it. `/admin/pricing` refuses to render without the permission, but that is only the UI half.
+
+**Permission choice.** Gated on `finance.edit_rates`, which already existed in the seeded RBAC model (003) and was already held by `finance_manager` and `super_admin`. `content.manage` was considered first and rejected: RBAC.md lists "financial settings" among `admin`'s explicit denials, and `content_manager` (015a) is a narrow curriculum-review role — gating money on a content permission would have silently widened both. No new permission was created and no role's grants changed.
+
+**Audit trail.** Both functions write to the existing `audit_log` (003) rather than a new pricing-specific table. `audit_log` had been created with RLS, indexes and a comment stating that inserts happen via SECURITY DEFINER functions only — but nothing had ever written to it; these are its first real writers. `target_id` is a uuid, so a `pricing_units` key (text) travels in `metadata` with `target_id` null, while a coin-package change uses `target_id` properly. The table's `num_nonnulls(actor_user_id, actor_system_id) = 1` check is satisfied because `has_permission` already proved `auth.uid()` resolves to a real profile — an anonymous caller can never reach the insert.
+
 ## Fixed during this audit
 
 ### 🔴 CRITICAL — Client-controlled point awarding

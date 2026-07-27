@@ -720,6 +720,30 @@ export const dictionary = {
     finalReject: { ar: "رفض نهائي", en: "Final reject" },
     finalNeedsRevision: { ar: "يحتاج تعديلًا", en: "Needs revision" },
   },
+
+  admin: {
+    pricingTitle: { ar: "إدارة التسعير", en: "Pricing management" },
+    pricingIntro: {
+      ar: "الأسعار هنا هي المصدر المعتمد الوحيد — أي تغيير يسري فورًا على العرض وعلى الخصم الفعلي في كل المنصة.",
+      en: "These prices are the single source of truth — a change applies immediately to both display and actual charging across the platform.",
+    },
+    pricingUnitsHeading: { ar: "أسعار الإجراءات (كوينز)", en: "Action prices (coins)" },
+    coinPackagesHeading: { ar: "باقات شراء الكوينز (دولار)", en: "Coin packages (USD)" },
+    pricingKeyCol: { ar: "المفتاح", en: "Key" },
+    pricingLabelCol: { ar: "الوصف", en: "Description" },
+    pricingCurrentCol: { ar: "السعر الحالي", en: "Current price" },
+    pricingNewCol: { ar: "السعر الجديد", en: "New price" },
+    pricingSave: { ar: "حفظ", en: "Save" },
+    pricingSaving: { ar: "جارِ الحفظ...", en: "Saving..." },
+    pricingSaved: { ar: "تم الحفظ ✅", en: "Saved ✅" },
+    pricingSaveFailed: { ar: "تعذّر الحفظ", en: "Couldn't save" },
+    packageCoinsCol: { ar: "عدد الكوينز", en: "Coins" },
+    packageNameCol: { ar: "الباقة", en: "Package" },
+    noPermission: {
+      ar: "هذه الصفحة مخصّصة لمن يملك صلاحية تعديل الأسعار (finance.edit_rates) فقط.",
+      en: "This page is for holders of the rate-editing permission (finance.edit_rates) only.",
+    },
+  },
 } as const;
 
 export type Dictionary = typeof dictionary;

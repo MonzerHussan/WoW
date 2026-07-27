@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
 import { getLessonDetail, resolveLanguageTask } from "@/features/lms/services/lesson.service";
+import { getPricingUnit, PRICING_KEYS } from "@/shared/services/pricing.service";
 import { LessonView } from "@/features/lms/components/LessonView";
 import { getAgentInitialState } from "@/features/agent/services/agent.service";
 import { FloatingAgent } from "@/features/agent/components/FloatingAgent";
@@ -25,14 +26,21 @@ export default async function LessonPage({ params }: { params: { id: string; les
     );
   }
 
-  // Only decides whether the wallet/submission lookups are worth doing —
-  // the same resolver the view and the API route use, so a lesson can't
-  // render a task the page didn't prefetch state for.
-  const hasLanguageTask = !!resolveLanguageTask(lesson.content);
+  // The same resolver the view and the API route use, so a lesson can't
+  // render a task the page didn't prefetch state for. It now yields the
+  // task's type/pricing key rather than a price — since 024 the number
+  // comes from pricing_units, fetched here server-side so the client
+  // never has to know how a price is decided.
+  const languageTask = resolveLanguageTask(lesson.content);
+
+  const [languageTaskCost, pronunciationCost] = await Promise.all([
+    languageTask ? getPricingUnit(supabase, languageTask.pricingKey) : Promise.resolve(null),
+    getPricingUnit(supabase, PRICING_KEYS.pronunciation),
+  ]);
 
   let walletBalance = 0;
   let languageTaskSubmitted = false;
-  if (user && hasLanguageTask) {
+  if (user && languageTask) {
     const [{ data: wallet }, { data: submission }] = await Promise.all([
       supabase.from("wallets").select("balance").eq("user_id", user.id).maybeSingle(),
       supabase
@@ -57,6 +65,8 @@ export default async function LessonPage({ params }: { params: { id: string; les
         hasUser={!!user}
         walletBalance={walletBalance}
         languageTaskSubmitted={languageTaskSubmitted}
+        languageTaskCost={languageTaskCost}
+        pronunciationCost={pronunciationCost}
       />
       {/* `lessonId` is what makes this agent lesson-aware: the route
           re-fetches the real content under RLS on every message. Only

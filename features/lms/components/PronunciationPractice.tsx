@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { t } from "@/shared/i18n/translations";
 import { Lang } from "@/shared/types";
-import { COIN_COSTS } from "@/shared/constants/coins";
 import { sendAgentMessage } from "@/features/agent/services/agent.client";
 
 type Phase = "idle" | "recording" | "recorded";
@@ -18,8 +17,9 @@ function getSpeechRecognition(): any {
  * "Shadowing" practice: hear the machine pronunciation (SpeakButton),
  * repeat it, compare. Recording and self-playback are FREE and
  * unlimited; only sending the transcript to the agent costs coins
- * (COIN_COSTS.PRONUNCIATION_EVALUATION), and that is repeatable without
- * limit by design (021 has no unique constraint).
+ * (pricing_units['pronunciation_practice'], 024 — passed in as a prop,
+ * never imported here), and that is repeatable without limit by design
+ * (021 has no unique constraint).
  *
  * WHY BOTH CAPTURES START TOGETHER: SpeechRecognition cannot transcribe
  * an already-recorded Blob — it only does live capture, and its
@@ -43,10 +43,18 @@ export function PronunciationPractice({
   lessonId,
   referenceText,
   lang,
+  coinCost,
 }: {
   lessonId: string;
   referenceText: string;
   lang: Lang;
+  /**
+   * From pricing_units (024), resolved server-side and passed down —
+   * this component no longer imports the price. Null means the price
+   * couldn't be read, in which case the evaluate button is hidden
+   * rather than offering to spend an unknown amount.
+   */
+  coinCost: number | null;
 }) {
   const [canRecord, setCanRecord] = useState(false);
   const [canTranscribe, setCanTranscribe] = useState(false);
@@ -246,7 +254,9 @@ export function PronunciationPractice({
           <audio src={audioUrl} controls className="h-8 max-w-[180px] align-middle" />
         )}
 
-        {transcript && phase !== "recording" && (
+        {/* coinCost === null: the price is unreadable, so don't offer a
+            paid action at all — the route would refuse it anyway. */}
+        {transcript && phase !== "recording" && coinCost !== null && (
           <button
             type="button"
             onClick={handleEvaluate}
@@ -255,7 +265,7 @@ export function PronunciationPractice({
           >
             {evaluating
               ? t("lms.evaluating", lang)
-              : `${t("lms.evaluateMine", lang)} (${COIN_COSTS.PRONUNCIATION_EVALUATION} ${t("lms.coinsUnit", lang)})`}
+              : `${t("lms.evaluateMine", lang)} (${coinCost} ${t("lms.coinsUnit", lang)})`}
           </button>
         )}
       </span>

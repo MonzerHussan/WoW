@@ -63,6 +63,31 @@ model prevents that.
 | `admin` | users.manage, content.manage, roles.assign, audit.read | financial settings, promoting super_admin |
 | `super_admin` | everything + roles.assign_super, settings.financial, data.hard_delete | — |
 
+**Platform pricing is governed by the existing `finance.edit_rates`**
+(migration 024): editing `pricing_units` (coin cost per charged action) and
+`coin_packages` (purchase prices), through `update_pricing_unit()` /
+`update_coin_package_price()`. **No new permission was introduced and no role's
+grants changed** — `finance_manager` and `super_admin` already held it, and the
+table above already denied `admin` "financial settings". `content.manage` was
+considered and rejected for exactly that reason: it would have silently handed
+price control to `admin` and to `content_manager` (015a), a narrow role created
+purely for curriculum review.
+
+Every price change writes to the `audit_log` **table** (actions
+`pricing.unit_updated` / `pricing.coin_package_updated`), which is what the
+cross-cutting rule below has always required. 024 is that table's first real
+writer — it had existed since 003 with RLS and indexes but nothing had ever
+inserted a row.
+
+**Roles cannot be self-assigned (migration 025).** Until 025, `profiles`'
+column-blind self-update policy let any user PATCH their own `role` to
+`admin`, granting themselves this entire permission set — verified live, not
+theoretical (see SECURITY.md). A `BEFORE UPDATE` trigger now rejects changes to
+`role`, `status` and `identity_verified_at` from any client session. Roles are
+granted out-of-band by the project owner via SQL. Note the consequence: there
+is still **no in-app write path for `roles.assign`** at all, since RLS confines
+profile updates to your own row.
+
 Rules: checks are done against **permissions** (`has_permission('finance.read')`),
 never role names. Only a super_admin can promote a super_admin (DB trigger
 enforces it). Every staff action writes to the `audit_log` **table** (003

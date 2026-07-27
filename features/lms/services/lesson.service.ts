@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { PRICING_KEYS, PricingKey } from "@/shared/services/pricing.service";
 
 export interface LessonNeighbor {
   id: string;
@@ -61,15 +62,16 @@ async function getLessonNeighbors(supabase: SupabaseClient, courseId: string, le
 
 export interface ResolvedLanguageTask {
   taskText: string;
-  coinCost: number;
-  /** Which shape it came from — the UI uses this to decide whether the module-closing framing applies. */
+  /** Which shape it came from — this is what selects the pricing key. */
   source: "language_task" | "module_closing";
+  /** The pricing_units key this task is charged at (024). */
+  pricingKey: PricingKey;
 }
 
 /**
  * One resolver for the two shapes a lesson's writing task can take, so
  * the page, the view and the API route cannot drift apart on which one
- * wins or what it costs.
+ * wins or how it is priced.
  *
  * `content.language_task` (023) is the current shape: a task at the root
  * of `content`, for any lesson. `content.module_closing
@@ -82,24 +84,33 @@ export interface ResolvedLanguageTask {
  * no lesson has both, so that branch should never be reachable; it is
  * defined here only so the outcome is decided rather than accidental.
  *
- * The coin cost is whatever the database says (3 for the 023 tasks, 5
- * for the module-closing ones) — never a constant in the client, per
- * CLAUDE.md #4.
+ * PRICING (changed in 024): this function no longer reads `coin_cost`
+ * from the content at all. The stored number still exists in the jsonb
+ * but is non-authoritative — it decides nothing, for display or for
+ * charging. What the content still decides is the task's *type*, and
+ * the type maps to a `pricing_units` key whose current value is read
+ * from the database. Consequently the presence of `coin_cost` is no
+ * longer part of the "is there a task here?" test either: a task is a
+ * task if it has prompt text.
  */
 export function resolveLanguageTask(content: unknown): ResolvedLanguageTask | null {
   const c = (content as any) || {};
 
   const direct = c.language_task;
-  if (direct?.prompt && typeof direct.coin_cost === "number") {
-    return { taskText: direct.prompt, coinCost: direct.coin_cost, source: "language_task" };
+  if (direct?.prompt) {
+    return {
+      taskText: direct.prompt,
+      source: "language_task",
+      pricingKey: PRICING_KEYS.languageTaskWriting,
+    };
   }
 
   const closing = c.module_closing;
-  if (closing?.optional_language_task && typeof closing.coin_cost === "number") {
+  if (closing?.optional_language_task) {
     return {
       taskText: closing.optional_language_task,
-      coinCost: closing.coin_cost,
       source: "module_closing",
+      pricingKey: PRICING_KEYS.languageTaskModuleClosing,
     };
   }
 

@@ -27,11 +27,13 @@ function VocabularyList({
   t,
   lessonId,
   lang,
+  pronunciationCost,
 }: {
   vocabulary: { en: string; ar: string }[];
   t: Translate;
   lessonId: string;
   lang: Lang;
+  pronunciationCost: number | null;
 }) {
   if (!vocabulary?.length) return null;
   return (
@@ -48,7 +50,7 @@ function VocabularyList({
                 {v.en}
                 <SpeakButton text={v.en} lang="en-US" label={t("lms.pronounceWord")} />
               </span>
-              <PronunciationPractice lessonId={lessonId} referenceText={v.en} lang={lang} />
+              <PronunciationPractice lessonId={lessonId} referenceText={v.en} lang={lang} coinCost={pronunciationCost} />
             </span>
           </div>
         ))}
@@ -64,7 +66,17 @@ interface GrammarPoint {
   examples?: { en: string; ar: string }[];
 }
 
-function GrammarPointCard({ point, lang, lessonId }: { point: GrammarPoint; lang: Lang; lessonId: string }) {
+function GrammarPointCard({
+  point,
+  lang,
+  lessonId,
+  pronunciationCost,
+}: {
+  point: GrammarPoint;
+  lang: Lang;
+  lessonId: string;
+  pronunciationCost: number | null;
+}) {
   if (!point) return null;
   const title = lang === "en" ? point.title_en : point.title_ar;
   return (
@@ -82,7 +94,7 @@ function GrammarPointCard({ point, lang, lessonId }: { point: GrammarPoint; lang
                 {ex.en}
                 <SpeakButton text={ex.en} lang="en-US" label={t("lms.pronounceWord", lang)} />
               </span>
-              <PronunciationPractice lessonId={lessonId} referenceText={ex.en} lang={lang} />
+              <PronunciationPractice lessonId={lessonId} referenceText={ex.en} lang={lang} coinCost={pronunciationCost} />
             </span>
           </div>
         ))}
@@ -131,11 +143,16 @@ export function LessonView({
   hasUser,
   walletBalance,
   languageTaskSubmitted,
+  languageTaskCost,
+  pronunciationCost,
 }: {
   lesson: LessonDetail;
   hasUser: boolean;
   walletBalance: number;
   languageTaskSubmitted: boolean;
+  /** From pricing_units (024), resolved server-side. Null means the price couldn't be read. */
+  languageTaskCost: number | null;
+  pronunciationCost: number | null;
 }) {
   const { lang, setLang, dir, t } = useLang("ar");
 
@@ -180,7 +197,12 @@ export function LessonView({
           {lang === "en" && (
             <div className="mt-2 flex flex-col gap-1">
               <SpeakButton text={localized.body} lang="en-US" label={t("lms.listen")} />
-              <PronunciationPractice lessonId={lesson.id} referenceText={localized.body} lang={lang} />
+              <PronunciationPractice
+                lessonId={lesson.id}
+                referenceText={localized.body}
+                lang={lang}
+                coinCost={pronunciationCost}
+              />
             </div>
           )}
         </div>
@@ -201,11 +223,22 @@ export function LessonView({
       )}
 
       {content.grammar_point && (
-        <GrammarPointCard point={content.grammar_point} lang={lang} lessonId={lesson.id} />
+        <GrammarPointCard
+          point={content.grammar_point}
+          lang={lang}
+          lessonId={lesson.id}
+          pronunciationCost={pronunciationCost}
+        />
       )}
 
       {content.vocabulary && (
-        <VocabularyList vocabulary={content.vocabulary} t={t} lessonId={lesson.id} lang={lang} />
+        <VocabularyList
+          vocabulary={content.vocabulary}
+          t={t}
+          lessonId={lesson.id}
+          lang={lang}
+          pronunciationCost={pronunciationCost}
+        />
       )}
 
       {hasUser && (
@@ -214,13 +247,16 @@ export function LessonView({
         </div>
       )}
 
-      {hasUser && languageTask && (
+      {/* No price, no card: showing a submit button whose cost we can't
+          state would ask the user to spend an unknown amount. The route
+          refuses the same case with a 503. */}
+      {hasUser && languageTask && languageTaskCost !== null && (
         <div className="border border-line rounded-wow p-5 mb-8">
           <h2 className="font-display font-bold text-navy text-sm mb-3">{t("lms.languageTask")}</h2>
           <LanguageTaskCard
             lessonId={lesson.id}
             taskText={languageTask.taskText}
-            coinCost={languageTask.coinCost}
+            coinCost={languageTaskCost}
             initialBalance={walletBalance}
             initialSubmitted={languageTaskSubmitted}
             lang={lang}

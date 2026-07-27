@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { evaluatePronunciationSchema } from "@/shared/schemas/pronunciation.schema";
 import { COIN_COSTS } from "@/shared/constants/coins";
+import { getPricingUnit, PRICING_KEYS } from "@/shared/services/pricing.service";
 import { logger } from "@/shared/lib/logger";
 
 /**
@@ -61,7 +62,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Lesson not found or not accessible" }, { status: 403 });
   }
 
-  const coinCost = COIN_COSTS.PRONUNCIATION_EVALUATION;
+  // Authoritative price since 024: pricing_units, editable from
+  // /admin/pricing. COIN_COSTS.PRONUNCIATION_EVALUATION survives only as
+  // a documented last-resort fallback for the case where the pricing row
+  // is unreadable — it is NOT the source of truth, and an admin's change
+  // will never be reflected in it.
+  const configuredCost = await getPricingUnit(supabase, PRICING_KEYS.pronunciation);
+  const coinCost = configuredCost ?? COIN_COSTS.PRONUNCIATION_EVALUATION;
+  if (configuredCost === null) {
+    logger.warn("pronunciation_price_fallback", {
+      userId: user.id,
+      fallback: COIN_COSTS.PRONUNCIATION_EVALUATION,
+    });
+  }
 
   const { data: inserted, error: insertError } = await supabase
     .from("pronunciation_attempts")

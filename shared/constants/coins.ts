@@ -1,19 +1,24 @@
 /**
- * Single source of truth for what a coin-charged action costs. Same rule
- * as REASON_POINTS in points.ts: the server NEVER accepts a coin amount
- * from a client request — it looks the cost up here. The client may
- * import these values too, but only to *display* the price; the charge
- * always uses the server's own copy.
+ * NO LONGER THE SOURCE OF TRUTH (migration 024).
  *
- * Note the deliberate split: a module's optional language task reads its
- * cost from `lessons.content->module_closing->coin_cost` (seed content,
- * 009) because it is authored per-module, while pronunciation practice
- * is a uniform platform action and is priced here.
+ * Every coin price now lives in the `pricing_units` table and is edited
+ * from /admin/pricing — see shared/services/pricing.service.ts. What
+ * remains here is a single hardcoded FALLBACK, kept deliberately and
+ * used only if the pricing row cannot be read at all; the route logs a
+ * `pronunciation_price_fallback` warning when that happens.
+ *
+ * Two consequences worth being explicit about:
+ *  - An admin's price change is NOT reflected in this constant. If they
+ *    ever diverge, the database wins everywhere except the fallback path.
+ *  - Do not add new prices here. New charged actions get a
+ *    `pricing_units` key instead.
+ *
+ * The rule that never changed: the server never accepts a coin amount
+ * from a client request. It resolves the price itself — now from the
+ * database rather than from this file.
  */
 export const COIN_COSTS = {
-  /** One agent evaluation of a spoken-then-transcribed phrase. Cheaper
-   *  than a written language task (5) because the evaluated text is a
-   *  single phrase and the feature is meant to be repeated for drill. */
+  /** Fallback only. Authoritative value: pricing_units['pronunciation_practice']. */
   PRONUNCIATION_EVALUATION: 3,
 } as const;
 

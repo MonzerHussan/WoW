@@ -709,3 +709,76 @@ each with its own separate history, confused more than they helped.
 left as an optional prop nobody passes; `ProfileView`'s `placementSlot`
 still demonstrates the same composition pattern if the dashboard ever
 needs an in-page panel again.
+
+## 17. Central pricing + the first admin page (migrations 024-025)
+
+Before this, a coin price could live in three unrelated places: inside
+`lessons.content` jsonb (two different shapes, from 009 and 023), in a
+hardcoded TypeScript constant (`COIN_COSTS.PRONUNCIATION_EVALUATION`),
+and in the `coin_packages` table. Changing one meant knowing which.
+
+`pricing_units` is now the single source of truth, keyed by **action
+type, not by lesson** — verified during 023 that every ordinary writing
+task costs the same and every module-closing task costs the same, with
+no per-lesson exceptions across all 18 lessons. A per-lesson price would
+have modelled a variation that does not exist.
+
+```
+pricing_units(key, coin_cost, label_ar/en, updated_by, updated_at)
+  'pronunciation_practice'       -> 3
+  'language_task_writing'        -> 3
+  'language_task_module_closing' -> 5
+
+readers  → shared/services/pricing.service.ts  getPricingUnit(key)
+writers  → update_pricing_unit() / update_coin_package_price()  [024]
+           guarded by has_permission('finance.edit_rates')
+UI       → /admin/pricing → POST /api/admin/pricing
+audit    → audit_log (003), one row per successful change
+```
+
+**What became non-authoritative.** `lessons.content->...->coin_cost`
+still exists in the data (no destructive migration over authored
+content) but decides nothing — not display, not charging.
+`resolveLanguageTask` no longer reads it, and no longer requires it to
+be present to recognise a task; the content now decides only the task's
+*type*, and the type selects a pricing key. `COIN_COSTS` survives as a
+documented last-resort fallback for the pronunciation route only, with
+a `pronunciation_price_fallback` warning when it is used — it is not the
+source of truth and will never reflect an admin's change.
+
+**Prices are resolved server-side and passed down as data.**
+`PronunciationPractice` used to import the price directly, which made a
+client component depend on a build-time constant. It now receives
+`coinCost` as a prop from the lesson page. Where a price cannot be read,
+the UI hides the paid action entirely rather than offering to spend an
+unknown amount, and the submit route refuses with 503 rather than
+charging a number nobody configured.
+
+**`/admin/pricing` — the platform's first admin page.** Deliberately one
+purpose-built screen, no admin shell or navigation. The permission check
+runs before any data fetch and before any markup, so a user without
+`finance.edit_rates` never receives the page structure. That is only the UI
+half: `pricing_units` has no UPDATE policy at all and both functions
+verify the permission themselves, so bypassing the page buys nothing.
+`/api/admin/pricing` validates shape with zod but is explicitly **not**
+the security boundary.
+
+**Permission choice.** Pricing is guarded by `finance.edit_rates`, which
+already existed in the seeded RBAC model and was already held by
+`finance_manager`/`super_admin`. `content.manage` was the first proposal
+and was rejected: RBAC.md denies `admin` "financial settings", and
+`content_manager` (015a) exists purely for curriculum review — gating
+money on a content permission would have silently widened both. Both
+functions are also `audit_log`'s first real writers; that table had
+existed unused since 003.
+
+**A critical hole was found while building this, and it was load-bearing
+for the whole feature.** `profiles`' self-update policy was column-blind,
+so any user could PATCH their own `role` to `admin` and self-grant the
+entire staff permission set — including `finance.edit_rates` via
+`super_admin`'s neighbours and, more directly, `content.manage`.
+Verified live, then fixed in 025 with a BEFORE UPDATE trigger. Without
+it any permission gate on this platform would have been decorative,
+including 015b/015c's curriculum-review governance. The related `points`/`level` self-award remains open because
+`awardPoints` writes those through the user's own session; see
+SECURITY.md and TECH_DEBT.
