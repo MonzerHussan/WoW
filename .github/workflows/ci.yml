@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    # `ci/**` exists so the pipeline itself can be validated on a scratch
+    # branch without pushing to main — that is how this workflow was first
+    # proven to actually fail on a broken test, rather than assumed to.
+    branches: [main, "ci/**"]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch cancels the older run — no point burning
+# minutes on a commit that has already been superseded.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: build · lint · test
+    runs-on: ubuntu-latest
+
+    # `next build` statically analyses pages that construct a Supabase
+    # client at module scope, so the two public env vars must exist or the
+    # build fails for the wrong reason. These are PLACEHOLDERS, not real
+    # credentials, and deliberately not secrets: nothing in CI talks to a
+    # live database. See the note in TESTING_POLICY.md about why RLS and
+    # security-definer behaviour still has to be verified by hand.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+      # Never a real key. No CI step calls OpenAI.
+      OPENAI_API_KEY: placeholder-openai-key
+      # Explicitly off, matching production. The simulated purchase route
+      # must stay disabled by default everywhere except a developer's
+      # own machine.
+      WALLET_SIMULATION_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` rather than `npm install`: it installs exactly what the
+      # lockfile pins and fails if package.json and the lockfile disagree,
+      # so CI cannot quietly pass on a different dependency tree than the
+      # one committed.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build

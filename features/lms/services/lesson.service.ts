@@ -134,7 +134,12 @@ const MAX_BODY_CHARS = 1200;
 const MAX_GRAMMAR_CHARS = 600;
 const MAX_VOCAB_ITEMS = 25;
 
-function clip(text: string | null | undefined, max: number): { value: string | null; clipped: boolean } {
+/**
+ * Exported solely so the truncation caps can be unit-tested without a
+ * database — TECH_DEBT #19 recorded that this branch had never run on
+ * real data, since no lesson is anywhere near the limits.
+ */
+export function clip(text: string | null | undefined, max: number): { value: string | null; clipped: boolean } {
   if (!text) return { value: null, clipped: false };
   const trimmed = text.trim();
   if (trimmed.length <= max) return { value: trimmed, clipped: false };
