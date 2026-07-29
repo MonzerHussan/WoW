@@ -10,12 +10,11 @@ import { logger } from "@/shared/lib/logger";
 // exceed Vercel Hobby's 10s default.
 export const maxDuration = 30;
 
-// 15 messages / 10 min: a full 8-exchange placement fits with headroom,
-// abuse doesn't. NOTE this in-memory limiter is the ONLY thing bounding
-// abandoned-and-restarted placement conversations (the once-only guard
-// below fires only after a COMPLETED placement) — a real OpenAI cost
-// exposure tracked explicitly in TECH_DEBT.md, same severity as the
-// simulated-purchase warning.
+// 15 messages / 10 min. This limiter shapes BURSTS only — it lives in
+// one serverless instance's memory, so it resets on every deploy and
+// cold start. It is no longer the only bound: `consume_placement_quota`
+// (029) enforces a durable lifetime cap in the database, which is what
+// actually closes the abandoned-conversation cost hole (TECH_DEBT #15).
 const RATE_LIMIT = { limit: 15, windowMs: 10 * 60 * 1000 };
 
 // When the client-held history reaches this length (~7 exchanges), the
@@ -32,6 +31,12 @@ const FORCE_CONCLUDE_AT = 14;
  * OpenAI call — a completed user costs us a single indexed SELECT, never
  * a model invocation. The user_language_profiles PRIMARY KEY backstops
  * the race two parallel tabs could win past this check (23505 -> 409).
+ *
+ * That guard only covers COMPLETED placements, though. The case it never
+ * covered — start, abandon, start again, forever — is now bounded by
+ * `consume_placement_quota()` (029): a durable per-user lifetime cap,
+ * checked immediately before the model call so an over-quota user is
+ * refused without costing anything. See TECH_DEBT #15 for the history.
  */
 export async function POST(req: NextRequest) {
   const supabase = supabaseServer();
@@ -102,6 +107,33 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // DURABLE COST CAP (029) — the last thing before we spend money, and
+  // deliberately after validation so a malformed request cannot burn
+  // quota. Check-and-increment happen in one atomic statement inside the
+  // function; a server restart cannot reset it because it is a table row,
+  // not a counter in memory.
+  const { data: quota, error: quotaError } = await supabase.rpc("consume_placement_quota");
+
+  if (quotaError) {
+    logger.error("placement_quota_failed", { userId: user.id, error: quotaError.message });
+    return NextResponse.json({ error: "Your agent is unavailable right now." }, { status: 502 });
+  }
+
+  const quotaResult = quota as { allowed: boolean; count: number; cap: number };
+  if (!quotaResult.allowed) {
+    // Refused BEFORE any OpenAI call — the point of the whole feature is
+    // that an over-quota user costs nothing.
+    logger.warn("placement_quota_exhausted", {
+      userId: user.id,
+      count: quotaResult.count,
+      cap: quotaResult.cap,
+    });
+    return NextResponse.json(
+      { error: "لقد استنفدت عدد رسائل محادثة تحديد المستوى. تواصل مع الدعم إن كنت تحتاج إعادة المحاولة." },
+      { status: 429 }
+    );
+  }
+
   let rawReply: string;
   try {
     rawReply = await callAgentWithRetry(messages);
@@ -113,7 +145,12 @@ export async function POST(req: NextRequest) {
   const { text: reply, placementRaw } = extractPlacementBlock(rawReply);
 
   if (!placementRaw) {
-    logger.info("placement_reply_sent", { userId: user.id, remaining: rl.remaining });
+    logger.info("placement_reply_sent", {
+      userId: user.id,
+      remaining: rl.remaining,
+      quotaUsed: quotaResult.count,
+      quotaCap: quotaResult.cap,
+    });
     return NextResponse.json({ reply, agentName, completed: false });
   }
 

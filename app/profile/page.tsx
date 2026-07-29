@@ -28,6 +28,7 @@ export default async function ProfilePage() {
         userId={user.id}
         overview={overview}
         lang="ar"
+        purchaseEnabled={process.env.WALLET_SIMULATION_ENABLED === "true"}
         placementSlot={
           <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang="ar" />
         }

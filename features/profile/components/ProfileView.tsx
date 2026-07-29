@@ -14,10 +14,14 @@ export function ProfileView({
   overview,
   lang = "ar" as const,
   placementSlot,
+  purchaseEnabled,
 }: {
   userId: string;
   overview: ProfileOverview;
   lang?: "ar" | "en";
+  /** Server-resolved WALLET_SIMULATION_ENABLED — the route refuses
+   *  regardless; this only decides what the panel offers. */
+  purchaseEnabled: boolean;
   /** Composed at the page level (features/agent's PlacementChat) —
    *  same slot pattern as the dashboard's assistantSlot, avoiding a
    *  sibling feature import (features/profile → features/agent). */
@@ -43,7 +47,11 @@ export function ProfileView({
 
       <CapabilitiesPanel userId={userId} activeCapabilities={overview.activeCapabilities} lang={lang} />
 
-      <WalletPanel balance={overview.walletBalance} packages={overview.coinPackages} />
+      <WalletPanel
+        balance={overview.walletBalance}
+        packages={overview.coinPackages}
+        purchaseEnabled={purchaseEnabled}
+      />
 
       <AgentRecommendationsPanel
         agentChosenName={overview.agentChosenName}

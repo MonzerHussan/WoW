@@ -569,6 +569,10 @@ export const dictionary = {
       ar: "⚠️ هذا شراء تجريبي محاكى فقط لأغراض الاختبار — لا توجد بوابة دفع حقيقية، ولن يُخصم أي مبلغ فعلي من أي بطاقة.",
       en: "⚠️ This is a simulated test purchase only — there is no real payment gateway, and no actual charge will be made to any card.",
     },
+    walletPurchaseDisabled: {
+      ar: "🔒 شراء الكوينز غير متاح حاليًا — بوابة الدفع الحقيقية لم تُفعَّل بعد. تواصل مع فريق WOW إن كنت تحتاج رصيدًا للاختبار.",
+      en: "🔒 Buying coins is unavailable — the real payment gateway isn't live yet. Contact the WOW team if you need a test balance.",
+    },
     buyPackage: { ar: "اشترِ", en: "Buy" },
     buying: { ar: "جارِ الشراء...", en: "Purchasing..." },
     purchaseSuccess: { ar: "تمت إضافة الكوينز إلى رصيدك ✅", en: "Coins added to your balance ✅" },

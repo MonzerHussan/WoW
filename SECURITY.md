@@ -313,6 +313,26 @@ Hybrid review does not mitigate it — the assessor sees a score, and a cheated 
 
 **Known residue:** `009_seed_pmp_level1.sql` still contains `correct_index` inside its jsonb, per the never-edit-old-migrations rule. Re-seeding a fresh database therefore needs 009 **then** 028; 028's self-check fails loudly if the key is ever present again, and `quiz.service.ts` keeps a defensive strip as a second net.
 
+## Two Beta launch blockers closed (migration 029 + wallet kill switch, 2026-07-29)
+
+**1. Durable cost cap on the placement conversation (TECH_DEBT #15).** The once-only guard on `/api/agent/placement` only fires after a *completed* placement, so start-abandon-restart was unbounded, and the only brake was an in-memory `rateLimit()` that resets on every deploy and cold start and multiplies by instance count on serverless.
+
+`placement_usage` now holds a per-user lifetime counter with a hard cap of 40 messages, consumed by `consume_placement_quota()` immediately before the model call and after validation — so a malformed request cannot burn quota and an over-quota user costs nothing.
+
+- **Check and increment are one atomic statement.** `insert ... on conflict do update ... where message_count < cap`. A read-then-write would let two concurrent requests both see 39 and both proceed; a cost control must not have that race. The `where` also means an over-quota caller updates zero rows, so the counter stops at the cap instead of climbing forever.
+- **The cap is a constant inside the function, not a parameter.** PostgREST exposes every public function, so a `p_cap` argument would have been raised by simply passing a bigger number — the same reasoning as never accepting a coin or points amount from a client.
+- **The table has a read-only owner policy and no write policy**, so a user can see their own count but cannot reset their own cost cap.
+
+*Verified live:* one real message incremented the counter to 1 and returned a genuine reply (no regression). Calls 38-40 returned `allowed:true`; call 41 returned `allowed:false` with the stored count pinned at **40, not 41**. A real route request then returned **429**, logging `placement_quota_exhausted` with **no** `placement_reply_sent`. The stronger evidence is timing: warm, three consecutive refusals took a flat **1913 / 1394 / 1388 ms** — the Supabase round-trip alone, far below real gpt-4o latency — so "no model call happened" is shown positively, not inferred from a missing log line. After a **full server restart** the counter still read 40 and the route still refused, which is precisely the scenario that reset the old limiter.
+
+**2. The simulated coin purchase is off by default.** `credit_coins()` mints spendable coins with no payment gateway and no limit on repeats; until now the only protection was a warning in this file and an orange box in the UI, neither of which stops a POST.
+
+`/api/wallet/purchase` now refuses unless `WALLET_SIMULATION_ENABLED === "true"`. A missing or misspelled variable **fails closed**, which is the correct direction for something that hands out free currency. The check is the first line of the handler, before the session is even read — whether a feature exists is not a per-user question — and returns **503, not 403**: the capability is absent, the caller did nothing wrong.
+
+*Verified live, both branches:* with the flag unset, **503** with a clear Arabic message, balance unchanged at **10**, and **no** new `coin_transactions` row. With `WALLET_SIMULATION_ENABLED=true`, **200**, balance `10 → 310`, and a real `+300 simulated_purchase` row — no regression in development.
+
+The UI shows a plain notice and disables the buy buttons when off, but that is presentation only; the route refuses regardless of what the client renders. This is **not** a payment gateway and does not pretend to be one — real purchasing remains separate, later work.
+
 ## Fixed during this audit
 
 ### 🔴 CRITICAL — Client-controlled point awarding

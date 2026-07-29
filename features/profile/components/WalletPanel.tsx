@@ -10,10 +10,22 @@ import { CoinPackageRow } from "@/features/profile/services/profile.service";
  * LOCALLY-SIMULATED purchase — no real payment gateway. The prominent
  * warning below is a UI requirement, not just a code comment: a user
  * clicking "Buy" must see, in the interface itself, that this is a
- * test purchase before they click it. See TECH_DEBT.md for the
- * no-rate-limit launch-blocker note.
+ * test purchase before they click it.
+ *
+ * `purchaseEnabled` mirrors the server's WALLET_SIMULATION_ENABLED. It is
+ * presentation only — /api/wallet/purchase refuses with 503 whatever this
+ * component renders, which is the actual protection. Hiding the buttons
+ * just means a user is told up front instead of after clicking.
  */
-export function WalletPanel({ balance: initialBalance, packages }: { balance: number; packages: CoinPackageRow[] }) {
+export function WalletPanel({
+  balance: initialBalance,
+  packages,
+  purchaseEnabled,
+}: {
+  balance: number;
+  packages: CoinPackageRow[];
+  purchaseEnabled: boolean;
+}) {
   const { lang, t } = useLang("ar");
   const [balance, setBalance] = useState(initialBalance);
   const [buyingId, setBuyingId] = useState<string | null>(null);
@@ -54,7 +66,9 @@ export function WalletPanel({ balance: initialBalance, packages }: { balance: nu
       <p className="text-xs text-ink-soft mb-4">{t("profile.walletBalance")}</p>
 
       <div className="bg-orange/10 border border-orange/30 rounded-lg px-3 py-2 mb-4">
-        <p className="text-xs font-semibold text-orange-dark">{t("profile.walletSimulatedWarning")}</p>
+        <p className="text-xs font-semibold text-orange-dark">
+          {purchaseEnabled ? t("profile.walletSimulatedWarning") : t("profile.walletPurchaseDisabled")}
+        </p>
       </div>
 
       {error && (
@@ -73,7 +87,7 @@ export function WalletPanel({ balance: initialBalance, packages }: { balance: nu
             <Button
               variant="ghost"
               onClick={() => handleBuy(pkg.id)}
-              disabled={buyingId !== null}
+              disabled={!purchaseEnabled || buyingId !== null}
               className="text-xs"
             >
               {buyingId === pkg.id ? t("profile.buying") : t("profile.buyPackage")}
