@@ -98,6 +98,27 @@ async function finish(
   return { awarded, points: profile.points, level: profile.level, newBadges };
 }
 
+export interface BadgeCandidate {
+  id: string;
+  name: string;
+  points_value: number;
+}
+
+/**
+ * The decision half of badge awarding, kept pure so it can be tested
+ * without a database: every badge at or below the current total that the
+ * user does not already hold.
+ *
+ * Note this is a threshold check, NOT a before/after delta window. That
+ * matters: it self-heals if a badge was ever missed (a failed insert, an
+ * award that predates a new badge), and it does not depend on knowing the
+ * previous balance — which this module stopped computing when 027 moved
+ * the points write into the database.
+ */
+export function selectNewBadges(eligible: BadgeCandidate[], heldIds: Set<string>, points: number) {
+  return eligible.filter((b) => b.points_value <= points && !heldIds.has(b.id));
+}
+
 async function syncBadges(supabase: SupabaseClient, userId: string, points: number) {
   const { data: eligible } = await supabase
     .from("badges")
@@ -107,11 +128,10 @@ async function syncBadges(supabase: SupabaseClient, userId: string, points: numb
   if (!eligible?.length) return [];
 
   const { data: held } = await supabase.from("user_badges").select("badge_id").eq("user_id", userId);
-  const heldIds = new Set((held || []).map((b: any) => b.badge_id));
+  const heldIds = new Set((held || []).map((b: any) => b.badge_id as string));
 
   const earned: { id: string; name: string }[] = [];
-  for (const badge of eligible) {
-    if (heldIds.has(badge.id)) continue;
+  for (const badge of selectNewBadges(eligible as BadgeCandidate[], heldIds, points)) {
     const { error } = await supabase.from("user_badges").insert({ user_id: userId, badge_id: badge.id });
     if (!error) earned.push({ id: badge.id, name: badge.name });
   }
