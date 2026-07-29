@@ -140,7 +140,7 @@ describe("REASON_POINTS", () => {
 
     // award_lesson_points is declared first in the file, award_quiz_points second.
     const [lessonAmount, quizAmount] = amounts;
-    expect(lessonAmount).toBe(REASON_POINTS.LESSON_COMPLETE);
+    expect(lessonAmount).toBe(REASON_POINTS.LESSON_COMPLETE + 1); // DELIBERATE BREAK — proving CI fails
     expect(quizAmount).toBe(REASON_POINTS.QUIZ_COMPLETE);
   });
 });
