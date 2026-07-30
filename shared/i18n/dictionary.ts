@@ -747,6 +747,21 @@ export const dictionary = {
       ar: "هذه الصفحة مخصّصة لمن يملك صلاحية تعديل الأسعار (finance.edit_rates) فقط.",
       en: "This page is for holders of the rate-editing permission (finance.edit_rates) only.",
     },
+    rolesTitle: { ar: "إدارة الأدوار", en: "Role management" },
+    rolesIntro: {
+      ar: "تغيير الدور يمنح أو يسحب صلاحيات فعلية فورًا، ويُسجَّل كل تغيير في سجل التدقيق.",
+      en: "Changing a role grants or withdraws real permissions immediately, and every change is written to the audit log.",
+    },
+    rolesRoleCol: { ar: "الدور", en: "Role" },
+    rolesSave: { ar: "حفظ", en: "Save" },
+    rolesSaving: { ar: "جارِ الحفظ...", en: "Saving..." },
+    rolesSaved: { ar: "تم الحفظ ✅", en: "Saved ✅" },
+    rolesSaveFailed: { ar: "تعذّر الحفظ", en: "Couldn't save" },
+    rolesYou: { ar: "أنت", en: "you" },
+    rolesNoPermission: {
+      ar: "هذه الصفحة مخصّصة لمن يملك صلاحية تعيين الأدوار (roles.assign) فقط.",
+      en: "This page is for holders of the role-assignment permission (roles.assign) only.",
+    },
   },
 } as const;
 

@@ -9,7 +9,17 @@ export type AccountType =
 
 export type Lang = "ar" | "en";
 
-export type AppRole = "user" | "moderator" | "admin";
+export type AppRole =
+  | "user"
+  | "moderator"
+  | "admin"
+  | "support_agent"
+  | "support_lead"
+  | "accountant"
+  | "finance_manager"
+  | "tech_support"
+  | "super_admin"
+  | "content_manager";
 
 export type Gender = "male" | "female" | "prefer_not_to_say";
 
