@@ -759,9 +759,18 @@ export const dictionary = {
     rolesSaveFailed: { ar: "تعذّر الحفظ", en: "Couldn't save" },
     rolesYou: { ar: "أنت", en: "you" },
     rolesNoPermission: {
-      ar: "هذه الصفحة مخصّصة لمن يملك صلاحية تعيين الأدوار (roles.assign) فقط.",
-      en: "This page is for holders of the role-assignment permission (roles.assign) only.",
+      ar: "هذه الصفحة مخصّصة لمن يملك صلاحية تعيين الأدوار (roles.assign) أو صلاحية إدارة المستخدمين (users.manage).",
+      en: "This page is for holders of the role-assignment permission (roles.assign) or the user-management permission (users.manage).",
     },
+    rolesSectionHeading: { ar: "الأدوار", en: "Roles" },
+    capabilitiesSectionHeading: { ar: "قدرات تحتاج ثقة", en: "Trust-gated capabilities" },
+    capabilitiesIntro: {
+      ar: "أستاذ/مدرب، موجّه، ومقيّم لا يمكن تفعيلها ذاتيًا — المنح هنا فقط، ويُسجَّل في سجل التدقيق.",
+      en: "Instructor, mentor, and assessor can't be self-activated — granting them only happens here, and is written to the audit log.",
+    },
+    capabilitiesGranting: { ar: "جارِ المنح...", en: "Granting..." },
+    capabilitiesGranted: { ar: "تم المنح ✅", en: "Granted ✅" },
+    capabilitiesGrantFailed: { ar: "تعذّر المنح", en: "Couldn't grant" },
   },
 } as const;
 

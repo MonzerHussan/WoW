@@ -5,15 +5,19 @@ import { useRouter } from "next/navigation";
 import { useLang } from "@/shared/hooks/useLang";
 import { Button } from "@/shared/components/Button";
 import { ErrorState } from "@/shared/components/Feedback";
-import { CAPABILITIES } from "@/shared/constants/capabilities";
+import { SELF_SERVICE_CAPABILITIES } from "@/shared/constants/capabilities";
 import { supabaseBrowser } from "@/shared/lib/supabase/client";
 import { translateAuthError } from "@/shared/i18n/supabase-errors";
 
 /**
  * Only ever adds — never removes an existing capability (per Sprint 3
  * scope). Writes straight to user_capabilities via the client: RLS
- * ("Own capabilities: manage", for all) already scopes it to the caller's
- * own row, no server route needed. Also logs to capability_activation_log
+ * ("Own capabilities: self-service insert", 034) scopes both which row
+ * (own) and which capabilities (learner/job_seeker/freelancer/client
+ * only) the caller may insert — instructor/mentor/assessor require a
+ * staff grant (grant_capability, /admin/roles) and are deliberately
+ * excluded from this list so the button never offers an option RLS will
+ * refuse. Also logs to capability_activation_log
  * (activated_via='profile_self_service') — writable by the owner as of
  * migration 010; best-effort (a log-write failure doesn't roll back or
  * block the actual capability grant above).
@@ -25,7 +29,7 @@ export function ActivateCapabilityButton({ userId, activeCapabilities }: { userI
   const [loadingValue, setLoadingValue] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const available = CAPABILITIES.filter((c) => !activeCapabilities.includes(c.value));
+  const available = SELF_SERVICE_CAPABILITIES.filter((c) => !activeCapabilities.includes(c.value));
 
   async function activate(value: string) {
     setLoadingValue(value);

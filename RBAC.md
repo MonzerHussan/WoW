@@ -114,16 +114,30 @@ certify). The enum ships in migration 003 so Sprint 2's LMS tables build on
 it from the start.
 
 `instructor`, `mentor`, `assessor` each link to an `earner_profiles` row
-(commission rate, payout account, verification) — one shared shape.
-`profiles.account_type` is demoted to an onboarding hint that seeds initial
-capabilities; it is no longer a permission source.
+(commission rate, payout account, verification) — one shared shape,
+though `earner_profiles` itself is still unwired to any real flow (see
+"Capability grants" below). `profiles.account_type` is demoted to an
+onboarding hint that seeds initial capabilities; it is no longer a
+permission source.
+
+**Capability grants (migration 034):** `instructor`/`mentor`/`assessor`
+cannot be self-granted — RLS on `user_capabilities` restricts client
+INSERTs to `learner`/`job_seeker`/`freelancer`/`client` only. The three
+trust-gated capabilities are granted exclusively through
+`grant_capability()`, a `users.manage`-gated security-definer function,
+from `/admin/roles`. This replaces the never-built `earner_profiles`
+verification flow as the actual gate for now — a human staff decision,
+audit-logged, not a document-review pipeline (that remains a real gap,
+just no longer a *silent* one).
 
 **Signup surface (migration 007):** the signup page also offers
-`instructor` and `institute` as account-type hints. `instructor` seeds the
-`instructor` capability after onboarding (earner verification comes later
-via `earner_profiles`). `institute` follows the same path as `company`:
-the founder signs up as an individual and is later directed to create an
-`organizations` row of type `institute` (org-creation flow is a future
+`instructor` and `institute` as account-type hints. `instructor` seeds
+NOTHING at signup (034) — like `company`/`institute`, it is only a
+stated intent recorded in `account_type`; the actual `instructor`
+capability arrives later via a staff `grant_capability` call. `institute`
+follows the same path as `company`: the founder signs up as an
+individual and is later directed to create an `organizations` row of
+type `institute` (org-creation flow is a future
 sprint). `workforce_partner`-style actors are NEVER a signup option —
 granted administratively only (DOMAIN_CONTRACTS.md §7). Google OAuth
 signups arrive with no account type; the onboarding wizard asks first and

@@ -7,13 +7,21 @@ import { AccountType } from "@/shared/types";
  * (migration 003 note; RBAC.md Layer 2). It is never a permission source.
  * company/institute seed nothing here — their power comes from the
  * organization they create (org-creation flow is a later sprint).
+ *
+ * instructor seeds nothing either (034): this used to self-grant the
+ * `instructor` capability directly, under the new signer's own session
+ * — the exact self-grant-with-no-verification hole TECH_DEBT #13 closed.
+ * RLS now refuses this insert outright (instructor is one of the three
+ * capabilities that require a staff grant_capability call), so picking
+ * "instructor" during signup is, like company/institute, only a stated
+ * intent today — the real capability arrives later via /admin/roles.
  */
 const CAPABILITY_SEED: Record<AccountType, string[]> = {
   student: ["learner"],
   job_seeker: ["job_seeker"],
   freelancer: ["freelancer", "client"],
   employee: ["learner"],
-  instructor: ["instructor"],
+  instructor: [],
   company: [],
   institute: [],
 };
