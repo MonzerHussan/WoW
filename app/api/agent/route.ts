@@ -16,6 +16,7 @@ import { agentRequestSchema, agentRecommendationSchema } from "@/shared/schemas/
 import { rateLimit } from "@/shared/lib/rate-limit";
 import { logger } from "@/shared/lib/logger";
 import { GOALS, GENDERS } from "@/shared/constants/onboarding";
+import { AGENT_CONTEXT_WINDOW } from "@/shared/constants/agent";
 import { AccountType } from "@/shared/types";
 
 // Vercel's default serverless function timeout (10s on Hobby) is shorter
@@ -34,13 +35,19 @@ const RATE_LIMIT = { limit: 20, windowMs: 10 * 60 * 1000 }; // 20 messages / 10 
 
 /**
  * POST /api/agent
- * Body: { message: string, history?: { role, content }[] }
+ * Body: { message: string, lessonId?: string }
  *
  * Renamed from /api/nova (Sprint 3): the assistant is now a per-user named
  * agent (user_agent_profiles.chosen_name, 007b), not a fixed "Nova"
  * persona — see features/agent/prompt.ts. Free to use for now (no coin
  * cost); the coin wallet (007b) is only wired up in the subscriptions
  * sprint, per CLAUDE.md.
+ *
+ * No client-supplied history (033) — conversation context comes from
+ * `agent_messages` itself, read fresh on every call (AGENT_CONTEXT_WINDOW
+ * most recent rows). A deliberate cost/speed tradeoff: memory beyond
+ * roughly the last ~10 exchanges is sacrificed so the prompt stays
+ * bounded regardless of how long a conversation has run.
  */
 export async function POST(req: NextRequest) {
   const supabase = supabaseServer();
@@ -73,7 +80,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request" }, { status: 400 });
   }
-  const { message, history, lessonId } = parsed.data;
+  const { message, lessonId } = parsed.data;
 
   const [
     { data: profile },
@@ -85,6 +92,7 @@ export async function POST(req: NextRequest) {
     { data: recs },
     { data: languageProfile },
     { data: learnerNoteRows },
+    { data: recentMessageRows },
     publishedCourses,
     enrollments,
     lessonContext,
@@ -143,6 +151,19 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(15),
+    // 033: server-derived conversation context, replacing the old
+    // client-supplied `history` field entirely — a client no longer has
+    // any say in what the model sees as prior turns. Same
+    // AGENT_CONTEXT_WINDOW the client-side history read uses, so what a
+    // user sees on screen always matches what actually reaches OpenAI.
+    // DESC+LIMIT then reversed below: the index (002) is built for
+    // exactly this "most recent N" query shape.
+    supabase
+      .from("agent_messages")
+      .select("role, content")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(AGENT_CONTEXT_WINDOW),
     // Real catalog grounding (fixes the "recommends Udemy/Coursera"
     // bug — without this, the model has zero idea WOW has real courses
     // and falls back to its own training knowledge).
@@ -185,13 +206,19 @@ export async function POST(req: NextRequest) {
     }) +
     (lessonContext ? buildLessonContextBlock(lessonContext) : "");
 
-  await supabase.from("ai_conversations").insert({ user_id: user.id, role: "user", message });
+  // Chronological order: the query above is DESC+LIMIT (cheapest way to
+  // get "the most recent N" from the index), reversed back to the order
+  // the model expects turns in.
+  const recentHistory = (recentMessageRows || [])
+    .slice()
+    .reverse()
+    .map((m: any) => ({ role: m.role as "user" | "assistant", content: m.content as string }));
 
   let rawReply: string;
   try {
     rawReply = await callAgentWithRetry([
       { role: "system", content: systemPrompt },
-      ...history,
+      ...recentHistory,
       { role: "user", content: message },
     ]);
   } catch (err) {
@@ -223,7 +250,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await supabase.from("ai_conversations").insert({ user_id: user.id, role: "assistant", message: reply });
+  // 033: both turns written together, only now that a real reply exists
+  // — record_agent_turn (security definer; agent_messages has no
+  // client-writable path at all) instead of the old two separate
+  // inserts split across the OpenAI call, which could leave an
+  // orphaned user-only row if the call above failed.
+  const { error: recordError } = await supabase.rpc("record_agent_turn", {
+    p_user_message: message,
+    p_assistant_reply: reply,
+  });
+  if (recordError) {
+    logger.error("agent_record_turn_failed", { userId: user.id, error: recordError.message });
+  }
 
   logger.info("agent_reply_sent", {
     userId: user.id,

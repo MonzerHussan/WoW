@@ -1,15 +1,7 @@
 import { z } from "zod";
 
-const historyMessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  content: z.string().max(4000),
-});
-
 export const agentRequestSchema = z.object({
   message: z.string().trim().min(1, "Message is required").max(2000),
-  // Cap history length server-side — a client cannot force the agent to
-  // process an unbounded/expensive context window.
-  history: z.array(historyMessageSchema).max(20).optional().default([]),
   // Set by the floating agent when the user is reading a lesson, so the
   // agent can actually answer questions about the material in front of
   // them. Only the *id* crosses the wire — the route fetches the real

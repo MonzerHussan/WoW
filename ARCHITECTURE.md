@@ -58,7 +58,7 @@ OpenAI GPT-4o (the personal agent), called only from the server
 
 ## 3. Data ownership model
 
-Every user-owned table (`enrollments`, `user_badges`, `ai_conversations`,
+Every user-owned table (`enrollments`, `user_badges`, `agent_messages`,
 `horizon_progress`, `entity_skills`, `skill_evidence`, `career_scores`,
 `quiz_attempts`) is protected by RLS policies scoped to `auth.uid()`.
 `profiles` is both the identity record and the gamification record (points,
@@ -77,11 +77,21 @@ The agent is **never called from the client with the OpenAI key**. The flow is:
 AgentChat (client) → POST /api/agent → load profile + agent name +
 capabilities + top skills + latest employability score +
 recent recommendations + published course catalog + this user's own
-enrollments (server) → inject as context → OpenAI chat.completions →
+enrollments + the last AGENT_CONTEXT_WINDOW agent_messages rows
+(server) → inject as context → OpenAI chat.completions →
 strip a trailing ```rec fenced block if present and insert it into
-career_recommendations → persist both turns to ai_conversations →
+career_recommendations → record_agent_turn() writes both turns to
+agent_messages together, only now that a real reply exists →
 return reply to client
 ```
+
+Conversation memory (033): `agent_messages` (renamed from
+`ai_conversations`) has no client-writable path at all — the same
+`forbid_client_write()` STATEMENT trigger from 030 — so
+`record_agent_turn()` is the only writer, and only the API route calls
+it. Both the OpenAI context and the client's own "restore history on
+load" read use the same `AGENT_CONTEXT_WINDOW` (20) most recent rows —
+a deliberate cost/speed tradeoff, not an oversight.
 
 The system prompt is built dynamically per request
 (`features/agent/prompt.ts`) from the user's chosen name and DNA

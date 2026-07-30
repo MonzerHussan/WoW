@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { t } from "@/shared/i18n/translations";
 import { Lang } from "@/shared/types";
-import { sendAgentMessage, AgentMsg } from "@/features/agent/services/agent.client";
+import { sendAgentMessage, getRecentAgentMessages, AgentMsg } from "@/features/agent/services/agent.client";
 import { isOffline } from "@/shared/i18n/supabase-errors";
 import { AgentNamePicker } from "@/features/agent/components/AgentNamePicker";
 
@@ -24,16 +24,24 @@ export default function AgentChat({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Seeded once on mount (033) — this card is always visible when
+  // rendered (unlike the floating agent's collapsed-by-default panel),
+  // so there's no "opened" gate to wait for.
+  useEffect(() => {
+    getRecentAgentMessages(userId).then((past) => {
+      if (past.length > 0) setMessages((m) => (m.length > 0 ? m : past));
+    });
+  }, [userId]);
+
   async function send() {
     if (!input.trim() || loading) return;
     const userMsg: AgentMsg = { role: "user", content: input.trim() };
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
+    setMessages((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
-      const reply = await sendAgentMessage(userMsg.content, nextMessages.slice(0, -1));
+      const reply = await sendAgentMessage(userMsg.content);
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch (err) {
       console.error("[agent] send failed:", err);

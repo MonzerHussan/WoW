@@ -77,8 +77,7 @@ export function LanguageTaskCard({
         const reply = await sendAgentMessage(
           // "لهذا الدرس", not "لهذه الوحدة": since 023 most of these
           // tasks belong to a single mid-module lesson, not a module ending.
-          `مهمة اللغة الإنجليزية لهذا الدرس:\n"${taskText}"\n\nردّي:\n${response}\n\nمن فضلك أعطني تغذية راجعة بالإنجليزية على القواعد والوضوح والمحتوى، بأسلوب مشجّع.`,
-          []
+          `مهمة اللغة الإنجليزية لهذا الدرس:\n"${taskText}"\n\nردّي:\n${response}\n\nمن فضلك أعطني تغذية راجعة بالإنجليزية على القواعد والوضوح والمحتوى، بأسلوب مشجّع.`
         );
         setFeedback(reply);
       } catch {

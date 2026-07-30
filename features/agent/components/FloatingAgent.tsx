@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLang } from "@/shared/hooks/useLang";
 import { Lang } from "@/shared/types";
-import { sendAgentMessage, AgentMsg } from "@/features/agent/services/agent.client";
+import { sendAgentMessage, getRecentAgentMessages, AgentMsg } from "@/features/agent/services/agent.client";
 import { isOffline } from "@/shared/i18n/supabase-errors";
 import { AgentNamePicker } from "@/features/agent/components/AgentNamePicker";
 
@@ -20,9 +20,11 @@ import { AgentNamePicker } from "@/features/agent/components/AgentNamePicker";
  * rendered for them. See TECH_DEBT for the route-group alternative once
  * the number of host pages grows.
  *
- * Conversation state is per-mount: closing the panel keeps it (the
- * component stays mounted), navigating away does not. `ai_conversations`
- * is written but never read back — see TECH_DEBT.
+ * Conversation state is seeded once from `agent_messages` (033) the
+ * first time the panel is opened — closing/reopening within the same
+ * mount keeps it in memory as before; navigating to a fresh page
+ * re-seeds from the same persisted history, closing the "dies on every
+ * reload" half of TECH_DEBT #17.
  */
 export function FloatingAgent({
   userId,
@@ -45,7 +47,19 @@ export function FloatingAgent({
   const [messages, setMessages] = useState<AgentMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Seeded once, the first time the panel is actually opened — not on
+  // every page mount, since most pages that render this component are
+  // never opened at all and the read would be wasted.
+  useEffect(() => {
+    if (!open || historyLoaded) return;
+    setHistoryLoaded(true);
+    getRecentAgentMessages(userId).then((past) => {
+      if (past.length > 0) setMessages((m) => (m.length > 0 ? m : past));
+    });
+  }, [open, historyLoaded, userId]);
 
   // The panel is short; without this a reply can land below the fold and
   // look like nothing happened.
@@ -67,13 +81,12 @@ export function FloatingAgent({
   async function send() {
     if (!input.trim() || loading) return;
     const userMsg: AgentMsg = { role: "user", content: input.trim() };
-    const nextMessages = [...messages, userMsg];
-    setMessages(nextMessages);
+    setMessages((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
 
     try {
-      const reply = await sendAgentMessage(userMsg.content, nextMessages.slice(0, -1), { lessonId });
+      const reply = await sendAgentMessage(userMsg.content, { lessonId });
       setMessages((m) => [...m, { role: "assistant", content: reply }]);
     } catch (err) {
       console.error("[floating-agent] send failed:", err);
