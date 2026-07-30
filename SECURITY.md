@@ -1,5 +1,21 @@
 # SECURITY.md
 
+## TECH_DEBT #9 closed (migration 032, 2026-07-30)
+
+`recompute_employability_score(p_attempt_id)` — the assessor-confirmed path for `career_scores(employability)`, deferred since 013. Checked live, before writing any code, whether the assessor's own session could run the TS auto-path function's three counting queries directly: `quiz_attempts` read is broad for any assessor, but `entity_skills` assessor-read is scoped to `source='assessment'` only, and `lesson_progress` has **no assessor read policy at all**. Opening one just for this would have been the same broad-RLS-grant-for-staff shape already rejected once for points (013) and skills (012), so the function reads all three tables itself, as a SECURITY DEFINER, bypassing RLS entirely — no new read policy was added anywhere.
+
+Verification reuses `award_quiz_points` (027)'s own branch-A predicate (`graded_by = auth.uid()` and the caller holds `assessor`), copied rather than shared through a helper — consistent with every other definer function in this codebase, each of which independently re-verifies its own triggering event.
+
+**Verified live, replaying a real assessor-confirmation end to end:**
+1. A real test account submitted the seeded hybrid quiz ("PMP Level 1 Final Assessment", 18 questions) with genuinely correct answers (score **100**, `pending_review:true` — the hybrid path, not auto).
+2. A second test account, holding the `assessor` capability, approved the attempt (`passed:true, graded_by:<assessor>`), then called `award_quiz_points` (→ `true`) and `recompute_employability_score` (→ `true`) in the same order the route uses.
+3. **Independent read** (student's own session) confirmed a genuinely new `career_scores` row: `score:4.50`, `explanation.factors` = `[{المهارات الموثّقة, weight 0.5, value 0}, {الاختبارات المجتازة, weight 0.3, value 15}, {الدروس المكتملة, weight 0.2, value 0}]` — `0*0.5 + 15*0.3 + 0*0.2 = 4.5`, matching the ported formula exactly.
+4. The student then completed a real lesson (`lesson_progress.completed=true`, own session). The assessor's session, queried directly against `lesson_progress` for that student, still returned **empty** — proving the read gap noted above stayed closed, not just unused. Re-invoking `recompute_employability_score` (still as the assessor) then correctly picked up the change via its RLS-bypassing read: a second real row, `score:5.50`, lessons factor now `5.00` — proof the function sees real data the assessor's own client session cannot.
+5. **Regression check:** the exact operation the untouched TS auto-path performs (`insert` into `career_scores` under the caller's own session, satisfying the pre-existing owner-only policy from 013) still succeeds identically post-032 — tested directly, succeeded.
+6. **Negative control:** the student, holding no `assessor` capability, calling the new function directly on their own attempt was refused **403/42501** (`"Not authorized to recompute this score"`).
+
+**Adjacent finding, out of scope, flagged not fixed:** provisioning the `assessor` capability for this test surfaced that `user_capabilities`' "Own capabilities: manage" policy (003, `for all using (auth.uid()=user_id)`) lets any authenticated session self-grant **any** capability — including `assessor` — with no verification step. Confirmed live: a plain test account inserted its own `assessor` row via a direct PostgREST call and it was immediately honored by `award_quiz_points`/`recompute_employability_score`. Not part of TECH_DEBT #9 and not touched here; worth its own item.
+
 ## TECH_DEBT #24 + #21 closed (migrations 030-031, 2026-07-30)
 
 **1. "Successful silence" on refused writes (TECH_DEBT #24).** `pricing_units`/`placement_usage` have RLS enabled with no INSERT/UPDATE/DELETE policy at all, so an unprivileged direct write always matched zero rows and PostgREST reported it as a plain 200/204 — correct protection, misleading shape, the same class already fixed once for `career_scores`/`language_task_submissions` (017-018).

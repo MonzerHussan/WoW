@@ -96,7 +96,7 @@ freelance_projects: same owner polymorphism; proposals reference
 | lesson completed | `lesson_progress` → Learning DNA + points (`LESSON_COMPLETE`) | ✅ live, server-verified |
 | quiz passed, auto-graded | `quiz_attempts` → Skills DNA via `entity_skills(source='assessment')` + `skill_evidence('quiz_attempt')` + points + `career_scores(employability)` recompute | ✅ live |
 | quiz passed, human/hybrid (assessor-confirmed) | same skills/evidence/points feed | ✅ live |
-| — `career_scores` recompute specifically for this path | needs the same security-definer-function treatment as `award_quiz_points()` before it's safe; a broad RLS policy letting an assessor write another user's score was deliberately rejected, same reasoning as points | ⬜ deferred (TECH_DEBT.md #9) |
+| — `career_scores` recompute specifically for this path | `recompute_employability_score(p_attempt_id)` (migration 032) — same security-definer-function treatment as `award_quiz_points()`, called from `grade/route.ts` right after points are paid | ✅ live |
 | certificate issued | `certificates` → Experience DNA + Employability recompute | ⬜ not built — no issuance flow/UI exists yet |
 | any of the above (once live) | a `career_scores` recompute — always a NEW time-series row, never an update | ✅ (auto path) |
 

@@ -99,11 +99,17 @@ export async function POST(req: NextRequest) {
         id: user.id,
       });
 
-      // Employability recompute on assessor-confirmed passes is
-      // deliberately deferred (owner decision) — career_scores currently
-      // only has an owner-insert policy (013), which doesn't cover this
-      // path (auth.uid() here is the assessor, not the student). Revisit
-      // with a similarly-scoped safe function when this is prioritized.
+      // 032: employability recompute for the assessor-confirmed path.
+      // security definer — the assessor's session can't insert directly
+      // into career_scores (owner-only policy, 013), and the function
+      // re-verifies this exact attempt/caller itself, same as
+      // award_quiz_points above.
+      const { error: scoreError } = await supabase.rpc("recompute_employability_score", {
+        p_attempt_id: attemptId,
+      });
+      if (scoreError) {
+        logger.error("quiz_grade_score_recompute_failed", { attemptId, error: scoreError.message });
+      }
     } catch (err) {
       logger.error("quiz_grade_dna_effects_failed", { attemptId, error: String(err) });
     }
