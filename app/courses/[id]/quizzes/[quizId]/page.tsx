@@ -22,16 +22,23 @@ export default async function QuizPage({ params }: { params: { id: string; quizI
       <main dir="rtl" className="min-h-screen px-5 py-10 max-w-2xl mx-auto text-center">
         <p className="text-ink-soft">{t("lms.lessonLocked", lang)}</p>
         <Link href={`/courses/${params.id}`} className="text-navy font-bold mt-4 inline-block">
-          ← {t("lms.backToCatalog", lang)}
+          ← {t("lms.backToCourse", lang)}
         </Link>
       </main>
     );
   }
 
+  // Only ever one direction, never a fabricated pair — a lesson quiz goes
+  // back to its lesson, a standalone course exam back to the course.
+  const backHref = quiz.lesson_id
+    ? `/courses/${params.id}/lessons/${quiz.lesson_id}`
+    : `/courses/${params.id}`;
+  const backLabel = quiz.lesson_id ? t("lms.backToLesson", lang) : t("lms.backToCourse", lang);
+
   return (
     <main dir="rtl" className="min-h-screen px-5 py-10 max-w-2xl mx-auto">
-      <Link href={`/courses/${params.id}`} className="text-sm text-ink-soft hover:text-navy mb-4 inline-block">
-        ← {t("lms.backToCatalog", lang)}
+      <Link href={backHref} className="text-sm text-ink-soft hover:text-navy mb-4 inline-block">
+        ← {backLabel}
       </Link>
       <h1 className="font-display font-black text-2xl text-navy mb-6">{quiz.title}</h1>
       <QuizTaker quiz={quiz} />

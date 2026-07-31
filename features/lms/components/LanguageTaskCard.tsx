@@ -46,6 +46,9 @@ export function LanguageTaskCard({
   const [submitted, setSubmitted] = useState(initialSubmitted);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [balance, setBalance] = useState(initialBalance);
+  // Optional, not forced (item #5 of the UI review) — the browser's
+  // native spellcheck defaulted on with no way to turn it off.
+  const [spellcheckEnabled, setSpellcheckEnabled] = useState(true);
 
   async function handleSubmit() {
     setSubmitting(true);
@@ -77,7 +80,13 @@ export function LanguageTaskCard({
         const reply = await sendAgentMessage(
           // "لهذا الدرس", not "لهذه الوحدة": since 023 most of these
           // tasks belong to a single mid-module lesson, not a module ending.
-          `مهمة اللغة الإنجليزية لهذا الدرس:\n"${taskText}"\n\nردّي:\n${response}\n\nمن فضلك أعطني تغذية راجعة بالإنجليزية على القواعد والوضوح والمحتوى، بأسلوب مشجّع.`
+          // Trailing instruction (item #11 of the UI review, product
+          // decision): if the response isn't real, recognizable English
+          // (random characters, keyboard-mashing), the agent must not
+          // fabricate a full corrected version — it should decline
+          // gently and ask for a genuine English attempt instead. Same
+          // condition applied to PronunciationPractice's request below.
+          `مهمة اللغة الإنجليزية لهذا الدرس:\n"${taskText}"\n\nردّي:\n${response}\n\nمن فضلك أعطني تغذية راجعة بالإنجليزية على القواعد والوضوح والمحتوى، بأسلوب مشجّع. لكن إن كان ردّي أعلاه غير مفهوم أو لا يحتوي كلمات إنجليزية حقيقية (نص عشوائي أو حروف عشوائية)، فلا تكتب لي تصحيحًا كاملًا جاهزًا — بدلًا من ذلك ارفضي بلطف واطلبي مني كتابة محاولة حقيقية بالإنجليزية أولاً.`
         );
         setFeedback(reply);
       } catch {
@@ -114,11 +123,20 @@ export function LanguageTaskCard({
         </span>
       </div>
       <textarea
-        className="field-input w-full min-h-[120px] mb-3"
+        className="field-input w-full min-h-[120px] mb-2"
         value={response}
         onChange={(e) => setResponse(e.target.value)}
         placeholder={t("lms.languageTaskPlaceholder", lang)}
+        spellCheck={spellcheckEnabled}
       />
+      <label className="flex items-center gap-2 text-xs text-ink-soft mb-3 w-fit cursor-pointer">
+        <input
+          type="checkbox"
+          checked={spellcheckEnabled}
+          onChange={(e) => setSpellcheckEnabled(e.target.checked)}
+        />
+        {t("lms.spellcheckToggle", lang)}
+      </label>
       {error && (
         <div className="mb-3">
           <ErrorState message={error} />

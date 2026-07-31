@@ -3,7 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useLang } from "@/shared/hooks/useLang";
 import { Lang } from "@/shared/types";
-import { sendAgentMessage, getRecentAgentMessages, AgentMsg } from "@/features/agent/services/agent.client";
+import {
+  sendAgentMessage,
+  getRecentAgentMessages,
+  getAgentChosenName,
+  AgentMsg,
+} from "@/features/agent/services/agent.client";
 import { isOffline } from "@/shared/i18n/supabase-errors";
 import { AgentNamePicker } from "@/features/agent/components/AgentNamePicker";
 
@@ -60,6 +65,17 @@ export function FloatingAgent({
       if (past.length > 0) setMessages((m) => (m.length > 0 ? m : past));
     });
   }, [open, historyLoaded, userId]);
+
+  // initialChosenName comes from a server-rendered prop that can be stale
+  // (Router Cache) right after a rename on /profile — re-read directly on
+  // mount so this page shows the current name without a hard refresh.
+  useEffect(() => {
+    if (needsNaming) return;
+    getAgentChosenName(userId).then((name) => {
+      if (name) setChosenName((c) => (c === name ? c : name));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   // The panel is short; without this a reply can land below the fold and
   // look like nothing happened.

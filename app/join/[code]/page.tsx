@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { t } from "@/shared/i18n/translations";
+import { Logo } from "@/shared/components/Logo";
 
 /**
  * Invite-link landing: /join/[code] resolves an instructor's personal
@@ -31,7 +32,8 @@ export default async function JoinByInviteCodePage({ params }: { params: { code:
 
   if (!course) {
     return (
-      <main dir="rtl" className="min-h-screen flex items-center justify-center px-5 text-center">
+      <main dir="rtl" className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center">
+        <Logo className="h-8" />
         <p className="text-ink-soft">{t("instructor.inviteCodeInvalid", lang)}</p>
       </main>
     );

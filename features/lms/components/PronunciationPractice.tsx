@@ -215,8 +215,13 @@ export function PronunciationPractice({
       }
 
       try {
+        // Trailing instruction (item #11 of the UI review, same product
+        // decision and condition as LanguageTaskCard's request above):
+        // if the transcript isn't real, recognizable English, the agent
+        // must not fabricate a word-by-word comparison — it should
+        // decline gently and ask for a genuine reading attempt instead.
         const reply = await sendAgentMessage(
-          `تدريب نطق: كان المفترض أن أقرأ هذه العبارة الإنجليزية:\n"${referenceText}"\n\nوهذا ما التقطه تحويل الكلام إلى نص من نطقي:\n"${transcript}"\n\nقارن بينهما وأخبرني بالكلمات التي أخطأت فيها أو أسقطتها، بأسلوب مشجّع. ملاحظة مهمة: أنت تقرأ نصًا محوّلًا ولا تسمع صوتي، فلا تعلّق على اللكنة أو نبرة الصوت.`
+          `تدريب نطق: كان المفترض أن أقرأ هذه العبارة الإنجليزية:\n"${referenceText}"\n\nوهذا ما التقطه تحويل الكلام إلى نص من نطقي:\n"${transcript}"\n\nقارن بينهما وأخبرني بالكلمات التي أخطأت فيها أو أسقطتها، بأسلوب مشجّع. ملاحظة مهمة: أنت تقرأ نصًا محوّلًا ولا تسمع صوتي، فلا تعلّق على اللكنة أو نبرة الصوت. لكن إن كان النص الملتقط أعلاه غير مفهوم أو لا يحتوي كلمات إنجليزية حقيقية (نتيجة تحويل كلام فاشلة أو عشوائية)، فلا تكتب لي مقارنة كاملة جاهزة — بدلًا من ذلك ارفضي بلطف واطلبي مني إعادة القراءة بوضوح أكبر.`
         );
         setFeedback(reply);
       } catch {

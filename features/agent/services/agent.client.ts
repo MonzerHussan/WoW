@@ -55,3 +55,21 @@ export async function setAgentChosenName(userId: string, chosenName: string) {
   const supabase = supabaseBrowser();
   return supabase.from("user_agent_profiles").update({ chosen_name: chosenName }).eq("user_id", userId);
 }
+
+/**
+ * Direct read under RLS ("Agent profile: owner") — same reasoning as
+ * getRecentAgentMessages above: the server prop passed on first render
+ * can be stale (Router Cache), so components re-read on mount to pick up
+ * a rename made moments earlier, e.g. via /profile.
+ */
+export async function getAgentChosenName(userId: string): Promise<string | null> {
+  const supabase = supabaseBrowser();
+  const { data, error } = await supabase
+    .from("user_agent_profiles")
+    .select("chosen_name")
+    .eq("user_id", userId)
+    .single();
+
+  if (error || !data) return null;
+  return data.chosen_name as string;
+}

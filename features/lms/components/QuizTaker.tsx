@@ -20,6 +20,9 @@ export function QuizTaker({ quiz }: { quiz: QuizForTaking }) {
   async function handleSubmit() {
     if (Object.keys(answers).length < quiz.questions.length) {
       setError(t("lms.answerAllQuestions"));
+      // The message renders above the questions; on a long quiz the
+      // unanswered one being submitted from is usually below the fold.
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
     setLoading(true);

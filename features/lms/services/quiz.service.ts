@@ -14,6 +14,9 @@ export interface QuizForTaking {
   assessment_mode: "auto" | "human" | "hybrid";
   passing_score: number;
   pmp_level: number | null;
+  /** Set for lesson quizzes, null for standalone course exams — see the
+   *  `num_nonnulls(course_id, lesson_id) = 1` check on `quizzes` (004). */
+  lesson_id: string | null;
   questions: QuizQuestionForTaking[];
   alreadyAttempted: boolean;
 }
@@ -34,7 +37,9 @@ export async function getQuizForTaking(
 ): Promise<QuizForTaking | null> {
   const { data: quiz, error } = await supabase
     .from("quizzes")
-    .select("id, title, assessment_mode, passing_score, pmp_level, quiz_questions(id, question, points, order_index)")
+    .select(
+      "id, title, assessment_mode, passing_score, pmp_level, lesson_id, quiz_questions(id, question, points, order_index)"
+    )
     .eq("id", quizId)
     .maybeSingle();
 
@@ -64,6 +69,7 @@ export async function getQuizForTaking(
     assessment_mode: quiz.assessment_mode,
     passing_score: quiz.passing_score,
     pmp_level: quiz.pmp_level,
+    lesson_id: quiz.lesson_id,
     questions,
     alreadyAttempted: !!existingAttempt,
   };
