@@ -1,5 +1,9 @@
+"use client";
+
 import { ReactNode } from "react";
-import { t } from "@/shared/i18n/translations";
+import { useLang } from "@/shared/hooks/useLang";
+import { Lang } from "@/shared/types";
+import { LangToggle } from "@/shared/components/LangToggle";
 import { ProfileOverview } from "@/features/profile/services/profile.service";
 import { DnaAxesPanel } from "@/features/profile/components/DnaAxesPanel";
 import { SkillsList } from "@/features/profile/components/SkillsList";
@@ -9,16 +13,32 @@ import { CapabilitiesPanel } from "@/features/profile/components/CapabilitiesPan
 import { AgentRecommendationsPanel } from "@/features/profile/components/AgentRecommendationsPanel";
 import { WalletPanel } from "@/features/profile/components/WalletPanel";
 
+/**
+ * Now the single owner of /profile's language state (035) — was a plain
+ * function receiving a static `lang` prop with no way to change it
+ * (TECH_DEBT #13's own description: "a user can't switch language while
+ * on /profile at all"). WalletPanel and ActivateCapabilityButton no
+ * longer run their own independent useLang() instances; both now follow
+ * this one, closing the "WalletPanel does, everything else doesn't"
+ * inconsistency as a direct consequence rather than a separate fix.
+ *
+ * Known residual gap, deliberately not addressed here: `placementSlot`
+ * is pre-rendered server-side (PlacementChat, still `lang="ar"`) and
+ * passed in as inert ReactNode — toggling the language on this page
+ * does not reach it, since it isn't re-evaluated on our re-render. Out
+ * of scope for this pass; PlacementChat is a narrow, largely one-time
+ * English-placement flow.
+ */
 export function ProfileView({
   userId,
   overview,
-  lang = "ar" as const,
+  initialLang,
   placementSlot,
   purchaseEnabled,
 }: {
   userId: string;
   overview: ProfileOverview;
-  lang?: "ar" | "en";
+  initialLang: Lang;
   /** Server-resolved WALLET_SIMULATION_ENABLED — the route refuses
    *  regardless; this only decides what the panel offers. */
   purchaseEnabled: boolean;
@@ -27,17 +47,26 @@ export function ProfileView({
    *  sibling feature import (features/profile → features/agent). */
   placementSlot?: ReactNode;
 }) {
+  const { lang, setLang, dir, t } = useLang(initialLang);
+
   return (
-    <div className="flex flex-col gap-5">
-      <h1 className="font-display font-black text-2xl text-navy">{t("profile.title", lang)}</h1>
+    // dir set here, not just on the server page's outer <main>: this is
+    // the only element in the tree whose direction actually needs to
+    // react to an in-page toggle click — the page-level <main> is
+    // server-rendered once from initialLang and doesn't re-render.
+    <div dir={dir} className="flex flex-col gap-5">
+      <div className="flex items-center justify-between">
+        <h1 className="font-display font-black text-2xl text-navy">{t("profile.title")}</h1>
+        <LangToggle lang={lang} onChange={setLang} />
+      </div>
 
       {placementSlot}
 
       <DnaAxesPanel dna={overview.dna} lang={lang} />
 
       <div className="grid sm:grid-cols-2 gap-5">
-        <ScoreCard title={t("profile.employabilityTitle", lang)} score={overview.employability} lang={lang} />
-        <ScoreCard title={t("profile.trustTitle", lang)} score={overview.trust} lang={lang} />
+        <ScoreCard title={t("profile.employabilityTitle")} score={overview.employability} lang={lang} />
+        <ScoreCard title={t("profile.trustTitle")} score={overview.trust} lang={lang} />
       </div>
 
       <div className="grid sm:grid-cols-2 gap-5">
@@ -51,6 +80,7 @@ export function ProfileView({
         balance={overview.walletBalance}
         packages={overview.coinPackages}
         purchaseEnabled={purchaseEnabled}
+        lang={lang}
       />
 
       <AgentRecommendationsPanel

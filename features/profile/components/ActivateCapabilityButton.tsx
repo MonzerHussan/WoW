@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useLang } from "@/shared/hooks/useLang";
+import { t } from "@/shared/i18n/translations";
+import { Lang } from "@/shared/types";
 import { Button } from "@/shared/components/Button";
 import { ErrorState } from "@/shared/components/Feedback";
 import { SELF_SERVICE_CAPABILITIES } from "@/shared/constants/capabilities";
@@ -22,9 +23,16 @@ import { translateAuthError } from "@/shared/i18n/supabase-errors";
  * migration 010; best-effort (a log-write failure doesn't roll back or
  * block the actual capability grant above).
  */
-export function ActivateCapabilityButton({ userId, activeCapabilities }: { userId: string; activeCapabilities: string[] }) {
+export function ActivateCapabilityButton({
+  userId,
+  activeCapabilities,
+  lang = "ar" as Lang,
+}: {
+  userId: string;
+  activeCapabilities: string[];
+  lang?: Lang;
+}) {
   const router = useRouter();
-  const { lang, t } = useLang("ar");
   const [open, setOpen] = useState(false);
   const [loadingValue, setLoadingValue] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +74,7 @@ export function ActivateCapabilityButton({ userId, activeCapabilities }: { userI
       )}
       {!open ? (
         <Button variant="ghost" onClick={() => setOpen(true)}>
-          {t("profile.activateCapability")}
+          {t("profile.activateCapability", lang)}
         </Button>
       ) : (
         <div className="flex flex-wrap gap-2">
@@ -78,7 +86,7 @@ export function ActivateCapabilityButton({ userId, activeCapabilities }: { userI
               className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold hover:border-navy/40 disabled:opacity-60"
             >
               <span>{cap.icon}</span>
-              <span>{loadingValue === cap.value ? t("profile.activating") : lang === "ar" ? cap.ar : cap.en}</span>
+              <span>{loadingValue === cap.value ? t("profile.activating", lang) : lang === "ar" ? cap.ar : cap.en}</span>
             </button>
           ))}
         </div>

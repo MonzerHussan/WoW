@@ -1,8 +1,7 @@
 import { supabaseServer } from "@/shared/lib/supabase/server";
-import { t } from "@/shared/i18n/translations";
-import { Logo } from "@/shared/components/Logo";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { getPublishedCourses } from "@/features/lms/services/course.service";
-import { CourseCatalog } from "@/features/lms/components/CourseCatalog";
+import { CoursesPageContent } from "@/features/lms/components/CoursesPageContent";
 import { getAgentInitialState } from "@/features/agent/services/agent.service";
 import { FloatingAgent } from "@/features/agent/components/FloatingAgent";
 
@@ -12,7 +11,7 @@ export default async function CoursesPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const courses = await getPublishedCourses(supabase);
-  const lang = "ar" as const;
+  const initialLang = getServerLang();
 
   // Unlike /dashboard and /profile, this page is public (middleware does
   // not gate it), so `user` really can be null here — hence the explicit
@@ -20,10 +19,8 @@ export default async function CoursesPage() {
   const agentState = user ? await getAgentInitialState(supabase, user.id) : null;
 
   return (
-    <main dir="rtl" className="min-h-screen px-5 py-10 max-w-6xl mx-auto">
-      <Logo className="h-8 mb-6" />
-      <h1 className="font-display font-black text-2xl text-navy mb-6">{t("lms.catalogTitle", lang)}</h1>
-      <CourseCatalog courses={courses} lang={lang} />
+    <main dir={initialLang === "ar" ? "rtl" : "ltr"} className="min-h-screen px-5 py-10 max-w-6xl mx-auto">
+      <CoursesPageContent courses={courses} initialLang={initialLang} />
       {user && agentState && (
         <FloatingAgent
           userId={user.id}

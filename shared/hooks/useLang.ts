@@ -3,53 +3,57 @@
 import { useState, useCallback, useEffect } from "react";
 import { Lang } from "@/shared/types";
 import { t, TranslationKey } from "@/shared/i18n/translations";
-
-const STORAGE_KEY = "wow.lang";
+import { LANG_COOKIE_NAME } from "@/shared/lib/lang-cookie";
 
 function isLang(value: unknown): value is Lang {
   return value === "ar" || value === "en";
 }
 
+function readCookieLang(): Lang | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)wow\.lang=([^;]*)/);
+  const value = match ? decodeURIComponent(match[1]) : null;
+  return isLang(value) ? value : null;
+}
+
+function writeCookieLang(value: Lang) {
+  try {
+    // 1 year, path=/ so every route sees it, Lax so it still rides along
+    // on the OAuth/auth-callback redirect.
+    document.cookie = `${LANG_COOKIE_NAME}=${value}; path=/; max-age=31536000; SameSite=Lax`;
+  } catch {
+    // Cookies blocked (private mode / hardened settings) — the choice
+    // still applies to this page, it just won't persist.
+  }
+}
+
 /**
- * The language choice now persists across pages and reloads (localStorage,
- * `wow.lang`) — before this, every page re-mounted at its own "ar" default,
- * so the toggle was effectively forgotten the moment you navigated.
+ * The language choice persists across pages and reloads via a COOKIE
+ * (`wow.lang`), not localStorage — a Server Component can read a cookie
+ * (shared/lib/lang-cookie.ts's getServerLang()), which is what makes it
+ * possible to pass the real, already-correct `initial` value in from the
+ * server on the pages that do so, eliminating the old "first paint in
+ * the default, then flips" flash entirely for those pages. Pages that
+ * still call `useLang("ar")` with a hardcoded default (everything not
+ * yet migrated — see TECH_DEBT.md) keep the old flash-then-correct
+ * behavior via the effect below, same as before.
  *
- * localStorage is read in an effect, never during render, deliberately:
- * the server has no access to it, so seeding state from it directly would
- * make the first client render disagree with the server's HTML — a real
- * hydration mismatch. The tradeoff is a brief first paint in `initial`
- * before a stored non-default choice applies. A cookie read server-side
- * would remove even that flash, but only by threading an initial lang
- * through every page that renders a translated component — a much larger
- * change than this hook.
- *
- * Note: each useLang() call owns its own state. Two components on the same
- * page therefore both *load* the same stored value, but toggling one does
- * not live-update the other. No page currently mounts two independent
- * toggles, so this isn't a live problem — it would need a context or a
- * shared store if that changes.
+ * Note: each useLang() call owns its own state. Two components on the
+ * same page therefore both *load* the same cookie value, but toggling
+ * one does not live-update the other (TECH_DEBT #18) — unchanged by
+ * this migration, still a real limitation.
  */
 export function useLang(initial: Lang = "ar") {
   const [lang, setLangState] = useState<Lang>(initial);
 
   useEffect(() => {
-    let stored: string | null = null;
-    try {
-      stored = window.localStorage.getItem(STORAGE_KEY);
-    } catch {
-      // Storage blocked (private mode / hardened settings) — keep `initial`.
-    }
-    if (isLang(stored)) setLangState(stored);
-  }, []);
+    const stored = readCookieLang();
+    if (stored && stored !== initial) setLangState(stored);
+  }, [initial]);
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // The choice still applies to this page, it just won't persist.
-    }
+    writeCookieLang(next);
   }, []);
 
   const dir: "rtl" | "ltr" = lang === "ar" ? "rtl" : "ltr";

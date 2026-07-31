@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { t } from "@/shared/i18n/translations";
 import { getLessonDetail, resolveLanguageTask } from "@/features/lms/services/lesson.service";
 import { getPricingUnit, PRICING_KEYS } from "@/shared/services/pricing.service";
@@ -12,15 +13,18 @@ export default async function LessonPage({ params }: { params: { id: string; les
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const lang = "ar" as const;
+  const initialLang = getServerLang();
 
   const lesson = await getLessonDetail(supabase, params.lessonId, user?.id ?? null);
   if (!lesson) {
     return (
-      <main dir="rtl" className="min-h-screen px-5 py-10 max-w-3xl mx-auto text-center">
-        <p className="text-ink-soft">{t("lms.lessonLocked", lang)}</p>
+      <main
+        dir={initialLang === "ar" ? "rtl" : "ltr"}
+        className="min-h-screen px-5 py-10 max-w-3xl mx-auto text-center"
+      >
+        <p className="text-ink-soft">{t("lms.lessonLocked", initialLang)}</p>
         <Link href={`/courses/${params.id}`} className="text-navy font-bold mt-4 inline-block">
-          ← {t("lms.backToCatalog", lang)}
+          ← {t("lms.backToCatalog", initialLang)}
         </Link>
       </main>
     );
@@ -67,6 +71,7 @@ export default async function LessonPage({ params }: { params: { id: string; les
         languageTaskSubmitted={languageTaskSubmitted}
         languageTaskCost={languageTaskCost}
         pronunciationCost={pronunciationCost}
+        initialLang={initialLang}
       />
       {/* `lessonId` is what makes this agent lesson-aware: the route
           re-fetches the real content under RLS on every message. Only

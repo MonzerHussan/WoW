@@ -26,7 +26,7 @@ export function CapabilitiesPanel({
           );
         })}
       </div>
-      <ActivateCapabilityButton userId={userId} activeCapabilities={activeCapabilities} />
+      <ActivateCapabilityButton userId={userId} activeCapabilities={activeCapabilities} lang={lang} />
     </Card>
   );
 }

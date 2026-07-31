@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { Logo } from "@/shared/components/Logo";
 import { getProfileOverview } from "@/features/profile/services/profile.service";
 import { ProfileView } from "@/features/profile/components/ProfileView";
@@ -20,14 +21,15 @@ export default async function ProfilePage() {
     getPlacementState(supabase, user.id),
     getAgentInitialState(supabase, user.id),
   ]);
+  const initialLang = getServerLang();
 
   return (
-    <main dir="rtl" className="min-h-screen px-5 py-10 max-w-4xl mx-auto">
+    <main dir={initialLang === "ar" ? "rtl" : "ltr"} className="min-h-screen px-5 py-10 max-w-4xl mx-auto">
       <Logo className="h-8 mb-6" />
       <ProfileView
         userId={user.id}
         overview={overview}
-        lang="ar"
+        initialLang={initialLang}
         purchaseEnabled={process.env.WALLET_SIMULATION_ENABLED === "true"}
         placementSlot={
           <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang="ar" />

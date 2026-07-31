@@ -145,6 +145,7 @@ export function LessonView({
   languageTaskSubmitted,
   languageTaskCost,
   pronunciationCost,
+  initialLang = "ar",
 }: {
   lesson: LessonDetail;
   hasUser: boolean;
@@ -153,8 +154,13 @@ export function LessonView({
   /** From pricing_units (024), resolved server-side. Null means the price couldn't be read. */
   languageTaskCost: number | null;
   pronunciationCost: number | null;
+  /** Server-read cookie (035) — eliminates the flash-then-correct this
+   *  page used to have as the only one of the five migrated pages still
+   *  defaulting blind to "ar". Optional/defaulted so nothing else that
+   *  renders LessonView without it breaks. */
+  initialLang?: Lang;
 }) {
-  const { lang, setLang, dir, t } = useLang("ar");
+  const { lang, setLang, dir, t } = useLang(initialLang);
 
   const content = lesson.content as {
     vocabulary?: { en: string; ar: string }[];

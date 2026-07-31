@@ -414,11 +414,11 @@ is currently unreachable.
 
 **Update (language persistence, §13):** once `useLang` began persisting
 the choice, `WalletPanel` — which calls `useLang` itself — did start
-showing `name_en`. What remains is narrower and is now tracked as
-TECH_DEBT #13: `ProfileView` still receives a hardcoded `lang="ar"`
-prop, so the panels around the wallet stay Arabic while the wallet
-follows the persisted language, and `/profile` still offers no way to
-switch language from the page itself.
+showing `name_en`. What remained (TECH_DEBT #13) — `ProfileView`
+receiving a hardcoded `lang="ar"` prop and no way to switch language
+on the page at all — is now closed by migration 035 (§14 below):
+`ProfileView` owns `useLang()`/`LangToggle` itself, and `WalletPanel`
+takes `lang` as a prop rather than its own independent instance.
 
 ## 13. Language persistence + the lesson player's pronunciation tools (migration 021)
 
@@ -433,6 +433,23 @@ an initial language through every page that renders a translated
 component. Each `useLang()` call still owns its own state, so two
 independent toggles on one page would not live-sync; no page mounts
 two today.
+
+**Update (cookie-based language, migration 035):** the storage backing
+`useLang` moved from `localStorage` to a cookie (`wow.lang`,
+`shared/lib/lang-cookie.ts`) — a Server Component can read a cookie,
+which localStorage never allowed, closing the actual root cause behind
+most pages ignoring the toggle entirely (confirmed live before the fix:
+setting the old localStorage key to "en" then visiting `/dashboard`
+still rendered fully Arabic). `app/layout.tsx`'s root `<html lang dir>`
+now reads the same cookie, removing even the first-paint flash for
+every page — not just the migrated five. Five highest-traffic pages
+(`/dashboard`, `/profile`, `/courses`, `/courses/[id]`, the lesson
+player) were threaded through to pass a server-read `initialLang` into
+their client view; the other eight still hardcode `"ar"` — deliberate,
+scoped, and tracked explicitly as TECH_DEBT #27 so the pattern doesn't
+silently reappear on the next new server page. The `useLang()` hook's
+public shape (`{lang, setLang, dir, t}`) did not change, so nothing
+calling it needed to change merely because of the storage swap.
 
 **The lesson player** (`features/lms/components/LessonView.tsx`) owns
 the toggle for the lesson route and passes `lang` down as a prop to
@@ -657,9 +674,11 @@ today** and is verified by code reading only, not by live data.
 **Known limitation, verified rather than assumed:** the widget follows
 the persisted AR/EN choice on every fresh page load, but not a switch
 made while the page is already open — each `useLang` instance reads
-localStorage once at mount and nothing notifies the others. Confirmed
-live (lesson player in EN, floating agent still Arabic; correct after
-reload) and tracked as TECH_DEBT #18 together with #13.
+the cookie once at mount (still true after migration 035's storage
+swap; the fix changed *where* the value lives, not this per-instance
+behavior) and nothing notifies the others. Confirmed live (lesson
+player in EN, floating agent still Arabic; correct after reload) and
+tracked as TECH_DEBT #18 together with #13 (#13 itself closed by 035).
 
 **Not solved here:** the agent still forgets the conversation itself on
 reload. `ai_conversations` has been written to since Sprint 3 and has

@@ -1,12 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
-import { getAccountTypeLabel } from "@/shared/constants/account-types";
-import { t } from "@/shared/i18n/translations";
-import LogoutButton from "@/shared/components/LogoutButton";
-import { Logo } from "@/shared/components/Logo";
-import { PointsCard } from "./PointsCard";
-import { BadgesList } from "./BadgesList";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
+import { DashboardContent } from "./DashboardContent";
 
 /**
  * This view used to take an `assistantSlot` holding a fixed AgentChat
@@ -15,6 +10,10 @@ import { BadgesList } from "./BadgesList";
  * itself when the floating agent replaced it — an optional prop nobody
  * passes is just drift. Re-adding it is a two-line change if the
  * dashboard ever needs to host an in-page panel again.
+ *
+ * Thin server wrapper (035): fetches data and redirects server-side,
+ * then hands off to DashboardContent (client) for useLang/LangToggle
+ * and rendering — same split already used by the lesson player.
  */
 export async function DashboardView() {
   const supabase = supabaseServer();
@@ -45,44 +44,5 @@ export async function DashboardView() {
     redirect(`/onboarding?type=${profile.account_type}`);
   }
 
-  const acc = profile ? getAccountTypeLabel(profile.account_type, "ar") : null;
-  const lang = "ar" as const;
-
-  return (
-    <main dir="rtl" className="min-h-screen px-5 py-10 max-w-5xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center gap-2.5">
-          <Logo className="h-8" />
-          <span className="text-ink-soft text-sm">| {t("dashboard.title", lang)}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/courses" className="text-sm font-bold text-ink-soft hover:text-navy">
-            {t("lms.catalogTitle", lang)}
-          </Link>
-          <Link href="/profile" className="text-sm font-bold text-ink-soft hover:text-navy">
-            {t("profile.title", lang)}
-          </Link>
-          <LogoutButton label={t("auth.logout", lang)} />
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
-        <div className="md:col-span-2 bg-white border border-line rounded-wow p-6">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="text-2xl">{acc?.icon}</span>
-            <h1 className="font-display font-black text-xl text-navy">
-              {t("dashboard.greeting", lang)} {profile?.full_name || ""} 👋
-            </h1>
-          </div>
-          <p className="text-ink-soft text-sm">
-            {t("dashboard.accountTypeLabel", lang)} <span className="font-bold text-navy">{acc?.label}</span>
-          </p>
-
-          <PointsCard points={profile?.points ?? 0} level={profile?.level ?? 1} lang={lang} />
-        </div>
-
-        <BadgesList badges={(badges as any) || []} lang={lang} />
-      </div>
-    </main>
-  );
+  return <DashboardContent profile={profile} badges={(badges as any) || []} initialLang={getServerLang()} />;
 }
