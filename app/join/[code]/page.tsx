@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { t } from "@/shared/i18n/translations";
 import { Logo } from "@/shared/components/Logo";
 
@@ -18,7 +19,7 @@ export default async function JoinByInviteCodePage({ params }: { params: { code:
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const lang = "ar" as const;
+  const initialLang = getServerLang();
 
   if (!user) {
     redirect(`/login?redirectedFrom=/join/${params.code}`);
@@ -32,9 +33,12 @@ export default async function JoinByInviteCodePage({ params }: { params: { code:
 
   if (!course) {
     return (
-      <main dir="rtl" className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center">
+      <main
+        dir={initialLang === "ar" ? "rtl" : "ltr"}
+        className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center"
+      >
         <Logo className="h-8" />
-        <p className="text-ink-soft">{t("instructor.inviteCodeInvalid", lang)}</p>
+        <p className="text-ink-soft">{t("instructor.inviteCodeInvalid", initialLang)}</p>
       </main>
     );
   }

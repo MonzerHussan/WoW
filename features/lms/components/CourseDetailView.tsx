@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { t } from "@/shared/i18n/translations";
 import { Card } from "@/shared/components/Feedback";
-import { CourseDetail } from "@/features/lms/services/course.service";
+import { CourseDetail, resolveCourseText } from "@/features/lms/services/course.service";
 import { UpcomingLiveSession } from "@/features/lms/services/live-session.service";
 import { EnrollButton } from "@/features/lms/components/EnrollButton";
 import { LiveSessionsUpcoming } from "@/features/lms/components/LiveSessionsUpcoming";
@@ -17,11 +17,12 @@ export function CourseDetailView({
   lang?: "ar" | "en";
   liveSessions?: UpcomingLiveSession[];
 }) {
+  const { title, summary } = resolveCourseText(course, lang);
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display font-black text-2xl text-navy mb-2">{course.title}</h1>
-        {course.summary && <p className="text-ink-soft">{course.summary}</p>}
+        <h1 className="font-display font-black text-2xl text-navy mb-2">{title}</h1>
+        {summary && <p className="text-ink-soft">{summary}</p>}
       </div>
 
       {userId && !course.isEnrolled && (

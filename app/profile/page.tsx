@@ -32,7 +32,7 @@ export default async function ProfilePage() {
         initialLang={initialLang}
         purchaseEnabled={process.env.WALLET_SIMULATION_ENABLED === "true"}
         placementSlot={
-          <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang="ar" />
+          <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang={initialLang} />
         }
       />
       <FloatingAgent

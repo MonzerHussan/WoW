@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { t } from "@/shared/i18n/translations";
 import { Logo } from "@/shared/components/Logo";
 import { listUsersForRoleAssignment, listUserCapabilities } from "@/shared/services/roles.service";
-import { RolesAdminView } from "@/features/admin/components/RolesAdminView";
-import { CapabilitiesAdminView } from "@/features/admin/components/CapabilitiesAdminView";
+import { AdminRolesPageContent } from "@/features/admin/components/AdminRolesPageContent";
 
 /**
  * Same shape as /admin/pricing (024): permission check before any data
@@ -28,7 +28,7 @@ export default async function AdminRolesPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const lang = "ar" as const;
+  const initialLang = getServerLang();
 
   if (!user) redirect("/login?redirectedFrom=/admin/roles");
 
@@ -39,9 +39,12 @@ export default async function AdminRolesPage() {
 
   if (!canAssignRoles && !canManageCapabilities) {
     return (
-      <main dir="rtl" className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center">
+      <main
+        dir={initialLang === "ar" ? "rtl" : "ltr"}
+        className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center"
+      >
         <Logo className="h-8" />
-        <p className="text-ink-soft">{t("admin.rolesNoPermission", lang)}</p>
+        <p className="text-ink-soft">{t("admin.rolesNoPermission", initialLang)}</p>
       </main>
     );
   }
@@ -55,27 +58,16 @@ export default async function AdminRolesPage() {
   ]);
 
   return (
-    <main dir="rtl" className="min-h-screen px-5 py-10 max-w-3xl mx-auto flex flex-col gap-12">
-      <div>
-        <Logo className="h-8 mb-6" />
-        <h1 className="font-display font-black text-2xl text-navy mb-2">{t("admin.rolesTitle", lang)}</h1>
-        <p className="text-sm text-ink-soft leading-relaxed">{t("admin.rolesIntro", lang)}</p>
-      </div>
-
-      {canAssignRoles && (
-        <section>
-          <h2 className="font-display font-bold text-navy mb-3">{t("admin.rolesSectionHeading", lang)}</h2>
-          <RolesAdminView users={users} currentUserId={user.id} canAssignSuper={!!canAssignSuper} lang={lang} />
-        </section>
-      )}
-
-      {canManageCapabilities && (
-        <section>
-          <h2 className="font-display font-bold text-navy mb-3">{t("admin.capabilitiesSectionHeading", lang)}</h2>
-          <p className="text-xs text-ink-soft mb-3">{t("admin.capabilitiesIntro", lang)}</p>
-          <CapabilitiesAdminView users={users} capabilitiesByUser={capabilitiesByUser} lang={lang} />
-        </section>
-      )}
+    <main dir={initialLang === "ar" ? "rtl" : "ltr"} className="min-h-screen px-5 py-10 max-w-3xl mx-auto">
+      <AdminRolesPageContent
+        users={users}
+        currentUserId={user.id}
+        canAssignRoles={!!canAssignRoles}
+        canAssignSuper={!!canAssignSuper}
+        canManageCapabilities={!!canManageCapabilities}
+        capabilitiesByUser={capabilitiesByUser}
+        initialLang={initialLang}
+      />
     </main>
   );
 }

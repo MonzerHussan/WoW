@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { Lang } from "@/shared/types";
 
 export interface CourseSummary {
   id: string;
@@ -7,6 +8,10 @@ export interface CourseSummary {
   cover_url: string | null;
   language: string;
   track: string;
+  /** Same shape as lessons.translations (008): {ar: {title, summary},
+   *  en: {...}}. title/summary above stay the canonical/fallback values —
+   *  a language missing from this object just falls back to them. */
+  translations: Record<string, { title?: string; summary?: string }>;
 }
 
 export interface LessonRow {
@@ -40,7 +45,7 @@ export interface CourseDetail extends CourseSummary {
 export async function getPublishedCourses(supabase: SupabaseClient): Promise<CourseSummary[]> {
   const { data, error } = await supabase
     .from("courses")
-    .select("id, title, summary, cover_url, language, track")
+    .select("id, title, summary, cover_url, language, track, translations")
     .eq("is_published", true)
     .order("title");
 
@@ -69,7 +74,7 @@ export async function getCourseDetail(
 ): Promise<CourseDetail | null> {
   const { data: course, error: courseError } = await supabase
     .from("courses")
-    .select("id, title, summary, cover_url, language, track")
+    .select("id, title, summary, cover_url, language, track, translations")
     .eq("id", courseId)
     .maybeSingle();
 
@@ -111,6 +116,19 @@ export async function getCourseDetail(
     .eq("course_id", courseId);
 
   return { ...course, modules: modulesWithSortedLessons, isEnrolled, courseQuizzes: courseQuizzes || [] };
+}
+
+/**
+ * Same fallback shape as LessonView's `lesson.translations[lang]` read:
+ * a language missing from `translations` (035) just falls back to the
+ * canonical title/summary columns rather than showing nothing.
+ */
+export function resolveCourseText(course: CourseSummary, lang: Lang): { title: string; summary: string | null } {
+  const localized = course.translations?.[lang];
+  return {
+    title: localized?.title || course.title,
+    summary: localized?.summary || course.summary,
+  };
 }
 
 /** Plain RLS-guarded insert — no points/side effects, so no API route needed. */

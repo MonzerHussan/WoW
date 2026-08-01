@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { t } from "@/shared/i18n/translations";
 import { Logo } from "@/shared/components/Logo";
 import { listPricingUnits, listCoinPackages } from "@/shared/services/pricing.service";
-import { PricingAdminView } from "@/features/admin/components/PricingAdminView";
+import { AdminPricingPageContent } from "@/features/admin/components/AdminPricingPageContent";
 
 /**
  * The platform's first admin page (migration 024). Deliberately a single
@@ -22,7 +23,7 @@ export default async function AdminPricingPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const lang = "ar" as const;
+  const initialLang = getServerLang();
 
   if (!user) redirect("/login?redirectedFrom=/admin/pricing");
 
@@ -34,9 +35,12 @@ export default async function AdminPricingPage() {
 
   if (!canEditRates) {
     return (
-      <main dir="rtl" className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center">
+      <main
+        dir={initialLang === "ar" ? "rtl" : "ltr"}
+        className="min-h-screen flex flex-col items-center justify-center px-5 gap-4 text-center"
+      >
         <Logo className="h-8" />
-        <p className="text-ink-soft">{t("admin.noPermission", lang)}</p>
+        <p className="text-ink-soft">{t("admin.noPermission", initialLang)}</p>
       </main>
     );
   }
@@ -44,11 +48,8 @@ export default async function AdminPricingPage() {
   const [units, packages] = await Promise.all([listPricingUnits(supabase), listCoinPackages(supabase)]);
 
   return (
-    <main dir="rtl" className="min-h-screen px-5 py-10 max-w-3xl mx-auto">
-      <Logo className="h-8 mb-6" />
-      <h1 className="font-display font-black text-2xl text-navy mb-2">{t("admin.pricingTitle", lang)}</h1>
-      <p className="text-sm text-ink-soft mb-8 leading-relaxed">{t("admin.pricingIntro", lang)}</p>
-      <PricingAdminView units={units} packages={packages} lang={lang} />
+    <main dir={initialLang === "ar" ? "rtl" : "ltr"} className="min-h-screen px-5 py-10 max-w-3xl mx-auto">
+      <AdminPricingPageContent units={units} packages={packages} initialLang={initialLang} />
     </main>
   );
 }

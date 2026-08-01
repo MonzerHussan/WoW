@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactElement, cloneElement, isValidElement } from "react";
 import { useLang } from "@/shared/hooks/useLang";
 import { Lang } from "@/shared/types";
 import { LangToggle } from "@/shared/components/LangToggle";
@@ -22,12 +22,20 @@ import { WalletPanel } from "@/features/profile/components/WalletPanel";
  * this one, closing the "WalletPanel does, everything else doesn't"
  * inconsistency as a direct consequence rather than a separate fix.
  *
- * Known residual gap, deliberately not addressed here: `placementSlot`
- * is pre-rendered server-side (PlacementChat, still `lang="ar"`) and
- * passed in as inert ReactNode — toggling the language on this page
- * does not reach it, since it isn't re-evaluated on our re-render. Out
- * of scope for this pass; PlacementChat is a narrow, largely one-time
- * English-placement flow.
+ * `placementSlot` is still built once at the page level in
+ * app/profile/page.tsx (PlacementChat, features/agent) — same reason as
+ * before, avoiding a sibling feature import (features/profile →
+ * features/agent). A render-prop function was tried first and rejected
+ * by Next.js at runtime: a Server Component cannot pass a plain function
+ * to a Client Component prop ("Functions cannot be passed directly to
+ * Client Components..."), which 500'd this whole page. `cloneElement`
+ * gets the same live reactivity without crossing that boundary: the
+ * element itself (serializable) is passed once, and `lang` is
+ * overridden on it every render — same component type/key, so
+ * PlacementChat is never remounted (its own open/messages state
+ * survives a toggle) while still re-rendering with the current
+ * language. Closes the gap this comment used to describe (the placement
+ * card staying Arabic regardless of the toggle).
  */
 export function ProfileView({
   userId,
@@ -44,8 +52,9 @@ export function ProfileView({
   purchaseEnabled: boolean;
   /** Composed at the page level (features/agent's PlacementChat) —
    *  same slot pattern as the dashboard's assistantSlot, avoiding a
-   *  sibling feature import (features/profile → features/agent). */
-  placementSlot?: ReactNode;
+   *  sibling feature import (features/profile → features/agent). Its
+   *  `lang` prop is overridden live via cloneElement below. */
+  placementSlot?: ReactElement<{ lang: Lang }>;
 }) {
   const { lang, setLang, dir, t } = useLang(initialLang);
 
@@ -60,7 +69,7 @@ export function ProfileView({
         <LangToggle lang={lang} onChange={setLang} />
       </div>
 
-      {placementSlot}
+      {placementSlot && isValidElement(placementSlot) && cloneElement(placementSlot, { lang })}
 
       <DnaAxesPanel dna={overview.dna} lang={lang} />
 

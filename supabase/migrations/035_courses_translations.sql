@@ -1,0 +1,16 @@
+-- TECH_DEBT #28: courses.title/summary are single-language text columns,
+-- so a viewer's chosen language never reaches the course catalog/detail
+-- cards — unlike lessons, which have had a translations jsonb column
+-- since 008. Mirrors that exact shape rather than inventing a new one:
+-- {ar: {title, summary}, en: {title, summary}}, with the existing
+-- title/summary columns kept as the canonical/fallback values (same
+-- relationship lessons.title has to lessons.translations).
+--
+-- No RLS change needed — "Courses: user-owner manages"/"org staff
+-- manage" (004) are row-level policies, already covering writes to any
+-- column including this new one.
+--
+-- description/language (both dead — description is null on every real
+-- row and never selected by any query, language is selected but never
+-- read) are deliberately left in place, same call as #22's coin_cost.
+alter table public.courses add column if not exists translations jsonb not null default '{}'::jsonb;

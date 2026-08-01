@@ -56,20 +56,32 @@ export async function setAgentChosenName(userId: string, chosenName: string) {
   return supabase.from("user_agent_profiles").update({ chosen_name: chosenName }).eq("user_id", userId);
 }
 
+export interface FreshAgentState {
+  chosenName: string;
+  needsNaming: boolean;
+}
+
 /**
  * Direct read under RLS ("Agent profile: owner") — same reasoning as
- * getRecentAgentMessages above: the server prop passed on first render
- * can be stale (Router Cache), so components re-read on mount to pick up
- * a rename made moments earlier, e.g. via /profile.
+ * getRecentAgentMessages above: the server props passed on first render
+ * (initialChosenName AND initialNeedsNaming) can both be stale (Router
+ * Cache), so components re-read on mount to pick up a rename made
+ * moments earlier on a different page. needsNaming uses the exact same
+ * updated_at/created_at formula as getAgentInitialState server-side
+ * (agent.service.ts) — kept in sync by hand, not shared, since one is a
+ * server-only Supabase client and the other a browser one.
  */
-export async function getAgentChosenName(userId: string): Promise<string | null> {
+export async function getFreshAgentState(userId: string): Promise<FreshAgentState | null> {
   const supabase = supabaseBrowser();
   const { data, error } = await supabase
     .from("user_agent_profiles")
-    .select("chosen_name")
+    .select("chosen_name, created_at, updated_at")
     .eq("user_id", userId)
     .single();
 
   if (error || !data) return null;
-  return data.chosen_name as string;
+  return {
+    chosenName: data.chosen_name as string,
+    needsNaming: data.updated_at === data.created_at,
+  };
 }

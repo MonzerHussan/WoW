@@ -6,7 +6,7 @@ import { Lang } from "@/shared/types";
 import {
   sendAgentMessage,
   getRecentAgentMessages,
-  getAgentChosenName,
+  getFreshAgentState,
   AgentMsg,
 } from "@/features/agent/services/agent.client";
 import { isOffline } from "@/shared/i18n/supabase-errors";
@@ -66,13 +66,18 @@ export function FloatingAgent({
     });
   }, [open, historyLoaded, userId]);
 
-  // initialChosenName comes from a server-rendered prop that can be stale
-  // (Router Cache) right after a rename on /profile — re-read directly on
-  // mount so this page shows the current name without a hard refresh.
+  // initialChosenName/initialNeedsNaming come from a server-rendered prop
+  // that can be stale (Router Cache) right after naming/renaming on a
+  // different page — re-read both directly on mount. needsNaming is only
+  // ever corrected true -> false here, never the other way: if the local
+  // state already trusts a saved name (e.g. onNamed just fired in this
+  // same mount), a stale-in-the-opposite-direction read must not yank the
+  // naming screen back over an open conversation.
   useEffect(() => {
-    if (needsNaming) return;
-    getAgentChosenName(userId).then((name) => {
-      if (name) setChosenName((c) => (c === name ? c : name));
+    getFreshAgentState(userId).then((fresh) => {
+      if (!fresh) return;
+      setChosenName((c) => (c === fresh.chosenName ? c : fresh.chosenName));
+      if (!fresh.needsNaming) setNeedsNaming(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);

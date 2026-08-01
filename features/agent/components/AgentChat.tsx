@@ -6,7 +6,7 @@ import { Lang } from "@/shared/types";
 import {
   sendAgentMessage,
   getRecentAgentMessages,
-  getAgentChosenName,
+  getFreshAgentState,
   AgentMsg,
 } from "@/features/agent/services/agent.client";
 import { isOffline } from "@/shared/i18n/supabase-errors";
@@ -38,12 +38,16 @@ export default function AgentChat({
     });
   }, [userId]);
 
-  // initialChosenName is a server-rendered prop that can be stale (Router
-  // Cache) right after a rename elsewhere — re-read directly on mount.
+  // initialChosenName/initialNeedsNaming are server-rendered props that
+  // can be stale (Router Cache) right after naming/renaming elsewhere —
+  // re-read both directly on mount. needsNaming only ever corrects
+  // true -> false, never the reverse — see FloatingAgent's identical
+  // effect for why.
   useEffect(() => {
-    if (needsNaming) return;
-    getAgentChosenName(userId).then((name) => {
-      if (name) setChosenName((c) => (c === name ? c : name));
+    getFreshAgentState(userId).then((fresh) => {
+      if (!fresh) return;
+      setChosenName((c) => (c === fresh.chosenName ? c : fresh.chosenName));
+      if (!fresh.needsNaming) setNeedsNaming(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
