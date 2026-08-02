@@ -11,6 +11,7 @@ import {
 } from "@/features/agent/services/agent.client";
 import { isOffline } from "@/shared/i18n/supabase-errors";
 import { AgentNamePicker } from "@/features/agent/components/AgentNamePicker";
+import { AgentVoiceCall } from "@/features/agent/components/AgentVoiceCall";
 
 /**
  * The agent, reachable from anywhere — a floating button plus a small
@@ -49,6 +50,7 @@ export function FloatingAgent({
   const [open, setOpen] = useState(false);
   const [chosenName, setChosenName] = useState(initialChosenName);
   const [needsNaming, setNeedsNaming] = useState(initialNeedsNaming);
+  const [inCall, setInCall] = useState(false);
   const [messages, setMessages] = useState<AgentMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -130,6 +132,21 @@ export function FloatingAgent({
               {chosenName.charAt(0)}
             </div>
             <h3 className="font-display font-bold text-navy text-sm flex-1 truncate">{chosenName}</h3>
+            {/* Hidden until the agent has a name: naming is the first
+                interaction by design (007b), and a paid call before it
+                would talk to an agent the user hasn't met yet. Also
+                hidden during a call — ending it is the call view's job. */}
+            {!needsNaming && !inCall && (
+              <button
+                type="button"
+                onClick={() => setInCall(true)}
+                aria-label={t("agent.voiceCallStart")}
+                title={t("agent.voiceCallStart")}
+                className="text-ink-soft hover:text-navy text-base leading-none px-1"
+              >
+                📞
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -140,7 +157,9 @@ export function FloatingAgent({
             </button>
           </div>
 
-          {needsNaming ? (
+          {inCall ? (
+            <AgentVoiceCall agentName={chosenName} lang={lang} onClose={() => setInCall(false)} />
+          ) : needsNaming ? (
             <div className="flex-1 flex items-center overflow-y-auto">
               <AgentNamePicker
                 userId={userId}

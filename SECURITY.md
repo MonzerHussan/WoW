@@ -117,9 +117,19 @@ today's RLS boundary.
 
 **No unique constraint, deliberately.** Unlike `language_task_submissions`, repeated attempts are the intended behavior, so the unique index cannot serve as an anti-double-charge guard here. Nothing needs it to: each attempt is a distinct, intentional purchase. This does mean the endpoint is repeatable at will, bounded only by the user's own balance — an ordinary spend, not an exploit, since every call debits real coins (contrast with the *unlimited free* simulated purchase, which is a genuine launch blocker in TECH_DEBT.md).
 
-**No audio ever reaches the server.** Recordings stay in browser memory (Blob + object URL, revoked on unmount) and are never uploaded; only the reference text and the speech-to-text transcript are stored. There is consequently no voice-data retention duty, and the UI says so explicitly.
+**No audio ever reaches the server *from pronunciation practice*.** Recordings stay in browser memory (Blob + object URL, revoked on unmount) and are never uploaded; only the reference text and the speech-to-text transcript are stored. There is consequently no voice-data retention duty *for this feature*, and the UI says so explicitly. **Voice calls (036) are a different transport with a different disclosure — see below.**
 
 **Charge ordering.** Coins are spent only after a non-empty transcript exists (produced client-side during recording, and re-validated server-side by the schema's `min(1)`). A failed or empty transcription never reaches the endpoint and never costs anything.
+
+## Agent voice calls (migration 036)
+
+**Audio leaves the device, and the disclosure says so.** Unlike pronunciation practice, a voice call streams the user's microphone live to OpenAI for the duration of the call. The transport is WebRTC **browser → OpenAI directly**: the audio does not pass through WOW's servers, which are on the credential-minting path only (`/api/agent/voice/session` mints a short-lived client secret; `OPENAI_API_KEY` never reaches the browser).
+
+**What WOW stores:** the session row (start, end, duration, model, coins charged and refunded, OpenAI call id) and the conversation **transcript**, written to `agent_messages` with `source='voice'` so its provenance is visible. **No audio is stored by WOW at any point.**
+
+**What WOW does not control:** what OpenAI retains of the audio it receives, which is governed by OpenAI's own API data policies, not ours.
+
+**The cap is disclosed, not enforced.** Calls are sold in 5-minute blocks and the UI ends the call at the cap, but the server is not on the media path and cannot force an in-progress call to stop — so a modified client can exceed it. The exposure is bounded (block paid up front, one active call per user, call starts rate-limited) and is disclosed here rather than implied away, the same treatment DOMAIN_CONTRACTS §8 gives self-reported live-session attendance.
 
 ## Wallet purchase simulation (migration 020, 2026-07-25)
 

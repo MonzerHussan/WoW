@@ -501,17 +501,74 @@ together; the voice call stayed deferred.
   وصول الوكيل العائم (سطحان بسجلَّين منفصلين يربكان)، وحُذف معها
   `assistantSlot` من `DashboardView` بدل تركه prop لا يمرّره أحد.
 
-**Task 3 / floating agent part 4 (deferred to its own future session,
-by explicit product decision)**: real-time voice chat via the OpenAI
-Realtime API, on the same DNA+catalog grounding as Task 1, with
-per-minute `spend_coins()` billing and a documented prompt-caching cost
-warning. The investigation confirmed why it stays separate: no WebRTC/
-WebSocket dependency exists in the project, there is no metered
-"charge while running" billing anywhere (every current cost is a single
-per-event `spend_coins()` call), and a browser-side Realtime session
-needs a server-minted ephemeral credential so `OPENAI_API_KEY` never
-reaches the client. It also needs its own migration(s) and its own
-due-diligence pass before any code.
+**Task 3 / floating agent part 4 — real-time voice calls ✅ (migration 036).**
+Sized before any code (six named parts أ-و, same discipline as the
+profile expansion), and two of the sizing answers changed the design
+before it was built:
+
+- **No post-call metering exists.** Verified against OpenAI's live docs:
+  no endpoint returns a completed call's duration or usage, and there is
+  no `realtime.call.ended` webhook (only `realtime.call.incoming`, SIP
+  only). A sideband monitor socket *does* exist
+  (`wss://.../v1/realtime?call_id=...`) but needs a long-lived process
+  this serverless deployment cannot host — the same constraint that
+  ruled out a relayed WebSocket transport in favour of WebRTC.
+- **The ephemeral token does not bound the call.** Its expiry gates
+  *creating* a session, not continuing one, so it cannot enforce the
+  5-minute cap. The first billing sketch assumed it could.
+
+What shipped instead: charge the whole capped block up front, refund
+unused whole minutes measured from **the database's own clock**, forfeit
+if the end is never reported. No client-supplied number touches the money
+path (027's rule). Model and cap are constants *inside*
+`start_agent_call()` — a `p_model`/`p_cap` argument would be raised by
+any caller through PostgREST (029's lesson). There is deliberately **no
+generic refund function**: the amount is computed inside
+`end_agent_call()` from a verified session, because a callable
+`refund_coins(amount)` would be the coin-minting hole 027 refused to
+write for points.
+
+**Two real bugs caught before they shipped, both by testing rather than
+reading.** (1) `Permissions-Policy: microphone=()` — an *empty
+allowlist*, which denies the feature to our own origin — had shipped in
+Sprint 1.5 and silently killed PronunciationPractice's (021) recording
+path for its entire life; found while sizing this feature, fixed to
+`microphone=(self)`, and 021 has now been confirmed working end-to-end
+for the first time (TECH_DEBT #29). (2) Minting a Realtime session
+without an `input.transcription` block echoes back `"transcription":
+null` — user transcription is **off by default**, so the transcript pair
+would never complete and voice memory would have failed silently with a
+perfectly working call. Verified against the live API and fixed to
+`gpt-4o-mini-transcribe`, which bills separately from realtime audio.
+
+**Privacy is a charter matter here, not copy.** Voice is the only place
+on the platform where a user's audio leaves their device, so the
+existing "no audio ever reaches the server" guarantee was *scoped* to
+pronunciation (still exactly true there) rather than weakened, and
+DOMAIN_CONTRACTS §12 was added: disclosure before the first call, what
+WOW stores, an explicit refusal to claim anything about OpenAI's
+retention, a recorded **T8 limitation** (hard erasure reaches our rows
+and the transcript, never audio a third party already received), and the
+cap disclosed as unenforceable — the same treatment §8 gives
+self-reported live-session attendance.
+
+Voice turns enter the same `agent_messages` memory as text, marked
+`source='voice'`. That is knowingly client-supplied text (033 removed
+exactly this for the text path), bounded two ways: `record_agent_turn`
+refuses a voice turn unless the caller has an ACTIVE session, and every
+row carries its provenance.
+
+**Verified live** (real charges, real OpenAI, owner's own browser and
+microphone): a real WebRTC call connected, Marin spoke natural Arabic,
+and a genuine `source='voice'` pair landed in memory. Across three full
+call cycles plus a pronunciation charge and the welcome grant, the
+wallet balance equalled the sum of `coin_transactions` **exactly** — no
+ledger drift. Server-side: 409 on a second concurrent start, 402 with
+`balance`/`required` when short, a normal 56s call billing 1 minute and
+refunding 16, a 1s failed handshake refunding all 20 (`status='failed'`),
+a voice turn refused after the call closed, and opening the disclosure
+charging nothing at all. The first `type='refund'` row this codebase has
+ever written.
 
 **بنية تسعير مركزية + أول واجهة أدمن ✅ (2026-07-27, migrations 024-026).**
 

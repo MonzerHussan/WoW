@@ -225,6 +225,99 @@ you can't see, say so plainly and ask them to paste it.
 ${ctx.truncated ? "- NOTE: this lesson was too long to include in full; some of it is cut off. Say so if asked about a part you can't see.\n" : ""}`;
 }
 
+export interface VoiceContext {
+  agentName: string;
+  styleHint: string;
+  fullName: string;
+  englishLevel: string | null;
+  learnerNotes: string[];
+  topSkills: { name: string; level: number | null }[];
+  courses: { id: string; title: string }[];
+  enrollments: { courseTitle: string; progress: number }[];
+}
+
+/** Trimmed harder than the text agent's equivalents — see buildVoiceSystemPrompt. */
+const VOICE_MAX_NOTES = 5;
+const VOICE_MAX_SKILLS = 3;
+const VOICE_MAX_COURSES = 10;
+
+/**
+ * The voice call's own system prompt (036) — deliberately NOT
+ * buildAgentSystemPrompt + the context blocks, for three reasons that
+ * have nothing to do with saving tokens:
+ *
+ * 1. THE ```rec BLOCK CANNOT EXIST HERE. In text it is invisible
+ *    plumbing that gets stripped before display. Spoken, the model would
+ *    read the backticks and the JSON out loud. Voice calls therefore
+ *    write no recommendations at all — that stays a text-agent job.
+ * 2. THE MEDIUM IS DIFFERENT. Markdown, bullet lists, and "/courses/{id}"
+ *    URLs are all unspeakable. The text prompt actively instructs the
+ *    model to produce two of those.
+ * 3. COST SHAPE IS DIFFERENT. These instructions are sent once at
+ *    session creation and then re-billed as input on EVERY assistant
+ *    turn for the whole call, alongside the accumulating conversation.
+ *    Keeping them short and — critically — IDENTICAL for the entire call
+ *    is what lets the prompt cache hit (cached input is $0.06/1M vs
+ *    $0.60/1M text, and $0.30/1M vs $10/1M audio on gpt-realtime-mini).
+ *    Nothing per-turn is interpolated in here on purpose.
+ *
+ * Course summaries are dropped and only titles + ids survive: the
+ * catalog grounding exists so the agent never invents a course, and a
+ * title is enough for that in speech.
+ */
+export function buildVoiceSystemPrompt(ctx: VoiceContext) {
+  const notes = ctx.learnerNotes.slice(0, VOICE_MAX_NOTES);
+  const skills = ctx.topSkills.slice(0, VOICE_MAX_SKILLS);
+  const courses = ctx.courses.slice(0, VOICE_MAX_COURSES);
+
+  const catalogLine = courses.length
+    ? courses.map((c) => `"${c.title}"`).join(" · ")
+    : "(no courses published yet)";
+  const enrollmentLine = ctx.enrollments.length
+    ? ctx.enrollments.map((e) => `"${e.courseTitle}" (${e.progress}% done)`).join(" · ")
+    : "(not enrolled in anything yet)";
+
+  return `You are ${ctx.agentName}, ${ctx.fullName}'s personal AI agent inside the WOW (World of Work) platform. You are talking to them OUT LOUD, on a live voice call.
+
+# HOW TO SPEAK
+- This is speech, not writing. Short, natural, conversational turns —
+  usually one to three sentences. Never monologue.
+- No markdown, no bullet points, no headings, no emoji, no code. Never
+  say a URL or an id out loud.
+- Mirror the user's language. They will usually speak Arabic — speak
+  natural spoken Arabic back, not formal written Arabic. Switch to
+  English the moment they do.
+- Interruptions are normal on a call. If they cut in, stop and listen.
+- If you don't catch something, say so briefly and ask them to repeat —
+  never invent what you think they said.
+
+# WHO YOU ARE TALKING TO
+- Name: ${ctx.fullName}
+- English level (their one-time placement): ${ctx.englishLevel ?? "not assessed yet"}
+- Strongest recorded skills: ${skills.length ? skills.map((s) => s.name).join(", ") : "none recorded yet"}
+- Things they've told you before: ${notes.length ? notes.map((n) => `«${n}»`).join(" · ") : "nothing recorded yet"}
+
+# STYLE FOR THIS USER
+${ctx.styleHint}
+
+# REAL WOW COURSES (the only ones that exist — never mention any other platform)
+${catalogLine}
+
+# WHAT THEY'RE ALREADY TAKING
+${enrollmentLine}
+
+# GUARDRAILS
+- Never claim they earned a skill, score, or certificate not listed above.
+- Never recommend a course from outside WOW (no Udemy, Coursera, or
+  LinkedIn Learning). If they want to enrol, tell them to open the
+  courses page on the site — do not recite a link.
+- Never give legal, medical, or financial advice.
+- If asked, say plainly that you are an AI agent, not a human.
+- This call is time-limited and costs the user coins per minute. Don't
+  pad it. If they've got what they needed, say so and let them go.
+`;
+}
+
 /** Extracts and removes a trailing \`\`\`rec ... \`\`\` block from a raw reply. */
 export function extractRecommendationBlock(reply: string): { text: string; recRaw: string | null } {
   const match = reply.match(/```rec\s*([\s\S]*?)```/);

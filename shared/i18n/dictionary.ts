@@ -461,9 +461,13 @@ export const dictionary = {
       ar: "التقييم يقيس دقة الكلمات المنطوقة فقط (عبر تحويل الكلام إلى نص) — لا يقيس اللكنة أو جودة النطق الصوتي، لأن وكيلك يستقبل نصًا ولا يسمع تسجيلك.",
       en: "Evaluation measures word accuracy only (via speech-to-text) — not accent or sound quality, because your agent receives text and never hears your recording.",
     },
+    // Deliberately scoped to pronunciation practice (036): the claim is
+    // still exactly true here — this feature never uploads audio — but
+    // read unscoped it would become a platform-wide promise that voice
+    // calls break. See agent.voiceCallDisclosure for that path.
     recordingNotStored: {
-      ar: "تسجيلك لا يُرفع ولا يُحفظ في أي مكان — يبقى في متصفحك ويختفي بإغلاق الصفحة.",
-      en: "Your recording is never uploaded or stored — it stays in your browser and disappears when you close the page.",
+      ar: "تسجيل تدريب النطق لا يُرفع ولا يُحفظ في أي مكان — يبقى في متصفحك ويختفي بإغلاق الصفحة.",
+      en: "Your pronunciation recording is never uploaded or stored — it stays in your browser and disappears when you close the page.",
     },
     micDenied: {
       ar: "تعذّر الوصول للميكروفون. اسمح للمتصفح باستخدامه ثم أعد المحاولة.",
@@ -606,6 +610,62 @@ export const dictionary = {
     lessonAwareIntro: {
       ar: "📖 أنا أرى هذا الدرس معك — اسألني عن أي جزء منه.",
       en: "📖 I can see this lesson with you — ask me about any part of it.",
+    },
+    // Shown BEFORE a voice call starts, not buried in settings — a T1-T9
+    // charter requirement, since this is the one place on the platform
+    // where a user's audio leaves their device. Deliberately makes no
+    // claim about what OpenAI retains: that is not ours to assert. See
+    // SECURITY.md "Agent voice calls" and DOMAIN_CONTRACTS §11.
+    voiceCallDisclosure: {
+      ar: "أثناء المكالمة الصوتية يُرسَل صوتك مباشرةً إلى مزوّد الذكاء الاصطناعي (OpenAI) لحظة بلحظة ليتمكّن وكيلك من الرد — الاتصال يتم من متصفحك إلى المزوّد مباشرة ولا يمر عبر خوادم WOW. نحن لا نحفظ أي تسجيل صوتي؛ ما نحفظه هو وقت المكالمة ومدتها والكوينز المخصومة، ونصّ المحادثة ليتذكّره وكيلك لاحقًا.",
+      en: "During a voice call your audio is streamed live to our AI provider (OpenAI) so your agent can respond. That connection goes from your browser straight to the provider — it does not pass through WOW's servers. We store no audio recording; we store the call's time, duration, coins charged, and the conversation transcript so your agent remembers it.",
+    },
+    voiceCallStart: { ar: "مكالمة صوتية", en: "Voice call" },
+    voiceCallTitle: { ar: "مكالمة صوتية مع وكيلك", en: "Voice call with your agent" },
+    voiceCallConfirm: { ar: "ابدأ المكالمة", en: "Start the call" },
+    voiceCallCancel: { ar: "إلغاء", en: "Cancel" },
+    // Composed in the component around the real numbers, so the price
+    // and the cap always come from the server rather than being frozen
+    // into a translated sentence.
+    voiceCallCostPrefix: { ar: "التكلفة:", en: "Cost:" },
+    voiceCallCoinsPerMinute: { ar: "كوينز/دقيقة", en: "coins/min" },
+    voiceCallCapNotice: {
+      ar: "تُحجز مدة المكالمة مقدمًا وتنتهي تلقائيًا عند بلوغ الحد. الدقائق غير المستخدمة تُعاد لمحفظتك عند الإنهاء.",
+      en: "The call length is reserved up front and ends automatically at the limit. Unused minutes are returned to your wallet when you hang up.",
+    },
+    voiceCallConnecting: { ar: "جارِ الاتصال...", en: "Connecting..." },
+    voiceCallListening: { ar: "المكالمة جارية — تكلّم بشكل طبيعي", en: "On the call — just talk normally" },
+    voiceCallRemaining: { ar: "المتبقي", en: "Remaining" },
+    voiceCallEnd: { ar: "إنهاء المكالمة", en: "End call" },
+    voiceCallEnding: { ar: "جارِ الإنهاء...", en: "Ending..." },
+    voiceCallMute: { ar: "كتم", en: "Mute" },
+    voiceCallUnmute: { ar: "إلغاء الكتم", en: "Unmute" },
+    voiceCallSummaryTitle: { ar: "انتهت المكالمة", en: "Call ended" },
+    voiceCallSummaryUsed: { ar: "المدة المحتسبة (دقائق):", en: "Billed minutes:" },
+    voiceCallSummaryRefunded: { ar: "أُعيد لمحفظتك (كوينز):", en: "Returned to your wallet (coins):" },
+    voiceCallErrInsufficient: {
+      ar: "رصيد الكوينز لا يكفي لبدء مكالمة. اشحن محفظتك من صفحتك الشخصية.",
+      en: "Not enough coins to start a call. Top up your wallet from your profile.",
+    },
+    voiceCallErrActive: {
+      ar: "لديك مكالمة جارية بالفعل. أنهِها أولًا ثم ابدأ واحدة جديدة.",
+      en: "You already have a call in progress. End it before starting another.",
+    },
+    voiceCallErrMic: {
+      ar: "تعذّر الوصول للميكروفون. اسمح للمتصفح باستخدامه ثم أعد المحاولة — لم تُخصم أي كوينز.",
+      en: "Couldn't reach your microphone. Allow it in your browser and try again — you were not charged.",
+    },
+    voiceCallErrRate: {
+      ar: "بدأت مكالمات كثيرة خلال وقت قصير. انتظر قليلًا ثم أعد المحاولة.",
+      en: "Too many calls started recently. Please wait a little and try again.",
+    },
+    voiceCallErrGeneric: {
+      ar: "تعذّر بدء المكالمة الآن. إن خُصمت كوينز فقد أُعيدت لمحفظتك.",
+      en: "Couldn't start the call right now. If any coins were taken, they've been returned.",
+    },
+    voiceCallDropped: {
+      ar: "انقطع الاتصال. أُنهيت المكالمة وأُعيدت الدقائق غير المستخدمة.",
+      en: "The connection dropped. The call was ended and unused minutes returned.",
     },
   },
 
