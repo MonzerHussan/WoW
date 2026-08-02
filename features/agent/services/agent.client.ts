@@ -50,10 +50,35 @@ export async function getRecentAgentMessages(userId: string): Promise<AgentMsg[]
 /**
  * Plain RLS-guarded update ("Agent profile: owner", for all) — no points
  * or other side effects, so no dedicated API route.
+ *
+ * The `.select()` is the point, not decoration. Without it, an UPDATE
+ * whose rows RLS filtered away returns **no error and no data** — the
+ * silent-success class this codebase has already been bitten by three
+ * times (018's rollback that never deleted, 015c's insert, and the whole
+ * reason migration 030 exists). Here it would be especially nasty: the
+ * name would appear to save, the picker would close, and the naming
+ * screen would return on the next page because the database never
+ * actually changed — indistinguishable, from the outside, from a
+ * caching bug.
+ *
+ * Returning zero rows is therefore treated as a failure the user is
+ * told about, rather than a success they later have to doubt. Found
+ * while investigating TECH_DEBT #30; it was NOT the cause there (the
+ * update was verified landing on three separate fresh accounts), but it
+ * is a real hole regardless of what #30 turns out to be.
  */
 export async function setAgentChosenName(userId: string, chosenName: string) {
   const supabase = supabaseBrowser();
-  return supabase.from("user_agent_profiles").update({ chosen_name: chosenName }).eq("user_id", userId);
+  const { data, error } = await supabase
+    .from("user_agent_profiles")
+    .update({ chosen_name: chosenName })
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
+
+  if (error) return { error };
+  if (!data) return { error: { message: "Agent name update matched no row" } };
+  return { error: null };
 }
 
 export interface FreshAgentState {

@@ -756,6 +756,27 @@ platform's highest privacy stakes, so any real design pass must start
 from the Transparency & Privacy Charter (T1–T9) already binding in
 DOMAIN_CONTRACTS.md, not have consent bolted on afterward.
 
+**Peer-to-peer communication — talking to a fellow learner (added
+2026-08-02).** Everything sketched above is one-directional: it makes a
+learner *visible* to others but gives them no way to actually talk. The
+missing layer is communication — messaging, and eventually calling, a
+classmate or colleague met through a shared course. Two on-ramps already
+exist: invite-code personal courses (3.2) and live sessions already put
+real people in the same room, and 036 shipped a working browser-to-browser
+WebRTC stack, so the *transport* problem for learner-to-learner calls is
+substantially solved in a way it was not when this section was first
+written. What is emphatically **not** solved is everything that matters
+more — who may contact whom and how that is revoked, blocking and
+reporting, and the content-moderation duty that arrives the instant users
+can send each other free text. Those are the same T1–T9 prerequisites
+this section already flags, except messaging raises them harder than a
+public profile does: a profile leaks information, a message channel
+invites harassment, and the platform owns the consequences of both.
+**Sequencing note:** this belongs after Phase 3 (follow) below, not
+alongside it — "who is allowed to message me" is answered most naturally
+by an existing connection, rather than by inventing a second permission
+model just for messages.
+
 ## خطة التدرج المعتمدة (4 مراحل، كل واحدة بوابة قبول مستقلة)
 
 القرار المعتمد: تدرج في كل المراحل — النشر والتفاعل والإعلانات. لا
@@ -842,3 +863,81 @@ doesn't have to be rediscovered from scratch later:
 
 No decision is made here — this section only records that the question
 exists.
+
+### 4. تجربة التغذية الراجعة لتقييم النطق — Pronunciation Feedback UX
+
+Two improvements to the paid pronunciation evaluation (021), both
+surfaced by *using* the feature rather than reviewing it — the owner hit
+them while live-testing after the microphone fix (TECH_DEBT #29) made
+that path reachable for the first time.
+
+- **(a) Structure the correction instead of narrating it.** The agent's
+  word-accuracy feedback currently returns as one dense paragraph —
+  observed live, a five-point correction list buried in prose. A
+  per-word or per-phrase list would let a learner see at a glance which
+  words they missed, which is the entire point of the purchase.
+- **(b) Stop it being a dead end.** Today the feedback is a message the
+  learner reads and cannot reply to. Letting them continue the
+  conversation about that specific evaluation — an "ask your agent about
+  this" affordance that opens the existing chat seeded with the
+  evaluation context — turns a one-shot verdict into coaching.
+
+How it connects to what exists: (b) is mostly plumbing, not a new
+mechanism — `PronunciationPractice` already routes through `/api/agent`,
+so the work is carrying the evaluation into `agent_messages` as context
+rather than discarding it. (a) needs the model to return something
+parseable alongside its prose, and the ` ```rec ` fenced-block pattern
+in `features/agent/prompt.ts` is the existing precedent for exactly that,
+including the "strip it before display" handling.
+
+One constraint any design must respect, already documented in 021 and
+SECURITY.md: **the agent receives a transcript, never audio.** So a
+structured result may describe word accuracy only — never accent, never
+pronunciation quality — and presenting it as anything more would collide
+with DOMAIN_CONTRACTS §10's rule against implying a language assessment
+we cannot actually make.
+
+### 5. جلسات مدرّبين بشريين مباشرة عبر Zoom — Live Human Trainer Sessions
+
+A paid offering where a learner books a real-time video call with an
+available human trainer — English coaching, or PM/management coaching —
+charged in coins like every other paid action on the platform.
+
+This is the first entry in this document that needs a **real human
+staffing model** behind it, not only software: trainer recruitment,
+vetting, availability, and payout are the substance, and the scheduling
+UI is the easy part. The workforce-outsourcing domain (Sprint 2.2 —
+`workforce_contracts`, `placements`, payout and guarantee patterns) is
+the closest existing precedent and is probably the right thing to reuse
+rather than inventing a parallel model for trainers.
+
+What already exists to build on: `live_sessions` /
+`live_session_attendance` (014) already model a scheduled session with a
+meeting link and an attendance record; `pricing_units` (024) would take
+one new entry; and the wallet path (`spend_coins`, 007b) is unchanged.
+
+**The hard problem is billing, and 036 just taught the exact lesson that
+applies.** Voice calls could not be metered by the platform because the
+platform was not on the media path — OpenAI exposes no post-call usage
+lookup and no call-ended webhook, so the design had to become "charge a
+bounded block up front, refund the unused remainder from the server's own
+clock, and disclose the cap as unenforceable." A Zoom session has the
+identical shape: WOW is not inside the call and cannot independently
+verify that it happened, how long it ran, or whether the trainer showed
+up. This also **raises an existing accepted caveat into a real problem**
+— DOMAIN_CONTRACTS §8 already records that live-session attendance is
+self-reported and verified by no meeting provider, which is tolerable
+while sessions are free and becomes untenable the moment coins change
+hands for them. Any design pass must answer, before writing a schema:
+what can actually be verified (Zoom's own APIs do report participant
+join/leave, unlike the Realtime API — that is the key difference worth
+checking first), what must be disclosed as unenforceable, and who
+absorbs a no-show on either side.
+
+Also unresolved and worth naming now: the Zoom integration shape (Meeting
+SDK embedded in the app vs. simply generating a scheduling link — a
+build-vs-link decision with very different costs), cancellation and
+refund policy (036 built the codebase's only refund path, so there is now
+a pattern to follow rather than invent), and whether trainers are
+platform staff, contractors, or a third category the RBAC model does not
+yet have.
