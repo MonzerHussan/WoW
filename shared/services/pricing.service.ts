@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { GameKey, GameVariant } from "@/shared/schemas/game.schema";
 
 /**
  * Central coin pricing (migration 024). Prices are keyed by ACTION TYPE,
@@ -18,9 +19,23 @@ export const PRICING_KEYS = {
   pronunciation: "pronunciation_practice",
   languageTaskWriting: "language_task_writing",
   languageTaskModuleClosing: "language_task_module_closing",
+  newProject: "new_project",
 } as const;
 
 export type PricingKey = (typeof PRICING_KEYS)[keyof typeof PRICING_KEYS];
+
+/**
+ * Mirrors 038's `play_game()` own `v_pricing_key` CASE exactly — the one
+ * irregular case is `project_vs_operations_race`, whose pricing keys are
+ * shortened to `game_project_vs_ops_*`. Any drift between this and the
+ * SQL function would just mean getPricingUnit() returns null (refused,
+ * not mis-charged) since play_game() is the actual source of truth for
+ * the charge — this is display-only.
+ */
+export function gamePricingKey(gameKey: GameKey, variant: GameVariant): string {
+  const base = gameKey === "project_vs_operations_race" ? "game_project_vs_ops" : `game_${gameKey}`;
+  return `${base}_${variant}`;
+}
 
 export interface PricingUnit {
   key: string;
@@ -38,7 +53,7 @@ export interface PricingUnit {
  */
 export async function getPricingUnit(
   supabase: SupabaseClient,
-  key: PricingKey
+  key: PricingKey | string
 ): Promise<number | null> {
   const { data } = await supabase
     .from("pricing_units")
