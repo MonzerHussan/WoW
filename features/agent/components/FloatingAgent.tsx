@@ -125,7 +125,7 @@ export function FloatingAgent({
       {open && (
         <div
           dir={dir}
-          className="fixed bottom-24 end-5 z-50 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[26rem] bg-white border border-line rounded-wow shadow-2xl flex flex-col p-4"
+          className="fixed bottom-28 end-5 z-50 w-[22rem] max-w-[calc(100vw-2.5rem)] h-[26rem] bg-white border border-line rounded-wow shadow-2xl flex flex-col p-4"
         >
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-full bg-purple flex items-center justify-center text-white font-display font-black text-sm shrink-0">
@@ -223,13 +223,16 @@ export function FloatingAgent({
         </div>
       )}
 
-      {/* z-50 clears the lesson player's sticky header (z-10). */}
+      {/* z-50 clears the lesson player's sticky header (z-10). Sized up
+          (owner instruction, navigation-restructuring batch item 8): must
+          read clearly as a persistent, always-reachable control on every
+          page, not a small corner icon easy to miss. */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? t("agent.floatingClose") : t("agent.floatingOpen")}
         aria-expanded={open}
-        className="fixed bottom-5 end-5 z-50 w-14 h-14 rounded-full bg-purple text-white text-2xl shadow-xl flex items-center justify-center hover:scale-105 transition"
+        className="fixed bottom-5 end-5 z-50 w-16 h-16 rounded-full bg-purple text-white text-3xl shadow-xl flex items-center justify-center hover:scale-105 transition"
       >
         {open ? "✕" : "💬"}
       </button>

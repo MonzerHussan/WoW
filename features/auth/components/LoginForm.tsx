@@ -49,7 +49,7 @@ export function LoginForm() {
         setError(translateAuthError(signInError, lang));
         return;
       }
-      router.push("/dashboard");
+      router.push("/profile");
       router.refresh();
     } catch (err) {
       setError(translateAuthError(err, lang));
@@ -66,6 +66,7 @@ export function LoginForm() {
       eyebrow={t("auth.loginEyebrow")}
       title={t("auth.loginTitle")}
       subtitle={t("auth.loginSubtitle")}
+      splitImage
       footer={
         <p className="text-sm text-center text-ink-soft mt-6">
           {t("auth.noAccount")}{" "}

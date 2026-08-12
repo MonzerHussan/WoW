@@ -51,6 +51,6 @@ export async function GET(req: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  const destination = profile?.onboarding_completed ? "/dashboard" : "/onboarding";
+  const destination = profile?.onboarding_completed ? "/profile" : "/onboarding";
   return NextResponse.redirect(new URL(destination, req.url));
 }

@@ -42,9 +42,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Already logged in, trying to reach login/signup -> send to dashboard
+  // Already logged in, trying to reach login/signup -> send to Profile
+  // (formerly /dashboard — same destination, renamed nav-restructuring round 2)
   if (isAuthPage && user) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/profile", request.url));
   }
 
   return response;

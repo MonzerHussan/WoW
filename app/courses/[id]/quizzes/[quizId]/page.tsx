@@ -1,47 +1,37 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
-import { t } from "@/shared/i18n/translations";
+import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { getQuizForTaking } from "@/features/lms/services/quiz.service";
-import { QuizTaker } from "@/features/lms/components/QuizTaker";
+import { QuizPageContent } from "@/features/lms/components/QuizPageContent";
 
+/**
+ * Fixed a real RTL bug (navigation-restructuring batch, item 4): this
+ * page used to hardcode `lang = "ar" as const` and `dir="rtl"`
+ * unconditionally — the quiz question content itself is English-only in
+ * the DB (no AR translation exists), so an English-reading visitor with
+ * `dir="rtl"` saw their own question text forced right-aligned. Now
+ * reads the real persisted language, same as every migrated page, and
+ * QuizPageContent (the new client half) owns a working LangToggle this
+ * page previously had none of at all.
+ */
 export default async function QuizPage({ params }: { params: { id: string; quizId: string } }) {
   const supabase = supabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const lang = "ar" as const;
+  const initialLang = getServerLang();
 
   if (!user) {
     redirect(`/login?redirectedFrom=/courses/${params.id}/quizzes/${params.quizId}`);
   }
 
   const quiz = await getQuizForTaking(supabase, params.quizId, user.id);
-  if (!quiz) {
-    return (
-      <main dir="rtl" className="min-h-screen px-5 py-10 max-w-2xl mx-auto text-center">
-        <p className="text-ink-soft">{t("lms.lessonLocked", lang)}</p>
-        <Link href={`/courses/${params.id}`} className="text-navy font-bold mt-4 inline-block">
-          ← {t("lms.backToCourse", lang)}
-        </Link>
-      </main>
-    );
-  }
 
   // Only ever one direction, never a fabricated pair — a lesson quiz goes
   // back to its lesson, a standalone course exam back to the course.
-  const backHref = quiz.lesson_id
+  const backHref = quiz?.lesson_id
     ? `/courses/${params.id}/lessons/${quiz.lesson_id}`
     : `/courses/${params.id}`;
-  const backLabel = quiz.lesson_id ? t("lms.backToLesson", lang) : t("lms.backToCourse", lang);
 
-  return (
-    <main dir="rtl" className="min-h-screen px-5 py-10 max-w-2xl mx-auto">
-      <Link href={backHref} className="text-sm text-ink-soft hover:text-navy mb-4 inline-block">
-        ← {backLabel}
-      </Link>
-      <h1 className="font-display font-black text-2xl text-navy mb-6">{quiz.title}</h1>
-      <QuizTaker quiz={quiz} />
-    </main>
-  );
+  return <QuizPageContent quiz={quiz} backHref={backHref} initialLang={initialLang} />;
 }

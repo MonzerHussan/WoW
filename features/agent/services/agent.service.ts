@@ -49,6 +49,25 @@ export async function getPlacementState(supabase: SupabaseClient, userId: string
   return { placed: !!data, englishLevel: data?.english_level ?? null };
 }
 
+export interface PlacementResult {
+  englishLevel: string;
+  summary: string;
+  placedAt: string;
+}
+
+/** The fuller placement read for the Assessments screen — getPlacementState
+ *  above stays as the lighter boolean+level UI-gating read other pages use. */
+export async function getPlacementResult(supabase: SupabaseClient, userId: string): Promise<PlacementResult | null> {
+  const { data } = await supabase
+    .from("user_language_profiles")
+    .select("english_level, placement_summary, placed_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!data) return null;
+  return { englishLevel: data.english_level, summary: data.placement_summary, placedAt: data.placed_at };
+}
+
 export interface AgentEnrollmentContext {
   courseId: string;
   courseTitle: string;

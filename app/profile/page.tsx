@@ -1,13 +1,17 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { getServerLang } from "@/shared/lib/lang-cookie.server";
-import { Logo } from "@/shared/components/Logo";
-import { getProfileOverview } from "@/features/profile/services/profile.service";
-import { ProfileView } from "@/features/profile/components/ProfileView";
-import { getPlacementState, getAgentInitialState } from "@/features/agent/services/agent.service";
-import { PlacementChat } from "@/features/agent/components/PlacementChat";
+import { DashboardView } from "@/features/dashboard/components/DashboardView";
+import { getAgentInitialState } from "@/features/agent/services/agent.service";
 import { FloatingAgent } from "@/features/agent/components/FloatingAgent";
 
+/**
+ * Second navigation-restructuring round: Profile is now the real,
+ * always-present nav tab showing what /dashboard used to show (DNA,
+ * scores, capabilities, wallet, avatar) — "only the entry point
+ * changed," per the owner's own instruction. /dashboard now redirects
+ * here instead of the reverse.
+ */
 export default async function ProfilePage() {
   const supabase = supabaseServer();
   const {
@@ -16,30 +20,17 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login?redirectedFrom=/profile");
 
-  const [overview, placement, agentState] = await Promise.all([
-    getProfileOverview(supabase, user.id),
-    getPlacementState(supabase, user.id),
-    getAgentInitialState(supabase, user.id),
-  ]);
-  const initialLang = getServerLang();
+  const agentState = await getAgentInitialState(supabase, user.id);
 
   return (
-    <main dir={initialLang === "ar" ? "rtl" : "ltr"} className="min-h-screen px-5 py-10 max-w-4xl mx-auto">
-      <Logo className="h-8 mb-6" />
-      <ProfileView
-        userId={user.id}
-        overview={overview}
-        initialLang={initialLang}
-        purchaseEnabled={process.env.WALLET_SIMULATION_ENABLED === "true"}
-        placementSlot={
-          <PlacementChat initialPlaced={placement.placed} initialLevel={placement.englishLevel} lang={initialLang} />
-        }
-      />
+    <>
+      <DashboardView />
       <FloatingAgent
         userId={user.id}
         initialChosenName={agentState.chosenName}
         initialNeedsNaming={agentState.needsNaming}
+        lang={getServerLang()}
       />
-    </main>
+    </>
   );
 }

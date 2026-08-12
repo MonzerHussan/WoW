@@ -86,6 +86,40 @@ export interface PendingAttempt {
   review_deadline: string | null;
 }
 
+export interface QuizHistoryRow {
+  id: string;
+  quizTitle: string;
+  score: number | null;
+  passed: boolean | null;
+  submittedAt: string;
+  gradedAt: string | null;
+  pendingReview: boolean;
+}
+
+/** Owner's own quiz history for the Assessments screen — RLS-scoped to
+ *  the caller already ("Attempts: owner reads own" or equivalent), so
+ *  no explicit .eq(user_id) filter is needed to stay correctly scoped,
+ *  but it's included anyway for an explicit, self-documenting query. */
+export async function getMyQuizHistory(supabase: SupabaseClient, userId: string): Promise<QuizHistoryRow[]> {
+  const { data, error } = await supabase
+    .from("quiz_attempts")
+    .select("id, score, passed, submitted_at, graded_at, graded_by, quizzes(title)")
+    .eq("user_id", userId)
+    .order("submitted_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((a: any) => ({
+    id: a.id,
+    quizTitle: a.quizzes?.title || "",
+    score: a.score,
+    passed: a.passed,
+    submittedAt: a.submitted_at,
+    gradedAt: a.graded_at,
+    pendingReview: a.graded_by === null && a.passed === null,
+  }));
+}
+
 /** Assessor queue: attempts awaiting human confirmation (human/hybrid, not yet graded). */
 export async function getPendingAttempts(supabase: SupabaseClient): Promise<PendingAttempt[]> {
   // quiz_attempts has two FKs into profiles (user_id and graded_by), so the

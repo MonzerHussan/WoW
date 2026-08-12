@@ -24,6 +24,7 @@ export function SignUpForm() {
   const [accountType, setAccountType] = useState<AccountType>("student");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmEmailSent, setConfirmEmailSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,6 +49,21 @@ export function SignUpForm() {
       // silently pushing the user into onboarding.
       if (data.user && data.user.identities?.length === 0) {
         setError(t("authErrors.userExists"));
+        return;
+      }
+      // REAL BUG FIXED HERE: this used to navigate to /onboarding
+      // unconditionally, assuming signUp() always leaves the browser with
+      // a live session. It doesn't — whenever the Supabase project has
+      // "Confirm email" turned on, signUp() succeeds (no error, a real
+      // user row) but returns `session: null` until the confirmation link
+      // is clicked. /onboarding is in middleware.ts's PROTECTED_PATHS, so
+      // navigating there with no session bounced the user straight back
+      // to /login — indistinguishable, from the outside, from "signup is
+      // broken" (reported live: a real new-account attempt failed this
+      // way). Now: only navigate to onboarding when a session actually
+      // came back; otherwise tell the user to confirm their email first.
+      if (!data.session) {
+        setConfirmEmailSent(true);
         return;
       }
       router.push(`/onboarding?type=${accountType}`);
@@ -77,6 +93,12 @@ export function SignUpForm() {
     >
       {error && <div className="mb-4"><ErrorState message={error} /></div>}
 
+      {confirmEmailSent ? (
+        <p className="text-sm text-ink bg-navy/5 rounded-lg p-4 leading-relaxed">
+          {t("authErrors.confirmEmailSent")}
+        </p>
+      ) : (
+        <>
       <GoogleButton label={t("auth.continueWithGoogle")} lang={lang} onError={setError} />
 
       <div className="flex items-center gap-3 my-4">
@@ -127,6 +149,8 @@ export function SignUpForm() {
       <p className="text-xs text-ink-soft bg-bg rounded-lg px-3 py-2 mt-4 leading-relaxed">
         {t("auth.note")}
       </p>
+        </>
+      )}
     </AuthLayout>
   );
 }

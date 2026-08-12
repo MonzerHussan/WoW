@@ -3,6 +3,7 @@ import { getServerLang } from "@/shared/lib/lang-cookie.server";
 import { getPublishedCourses } from "@/features/lms/services/course.service";
 import { CoursesPageContent } from "@/features/lms/components/CoursesPageContent";
 import { getAgentInitialState } from "@/features/agent/services/agent.service";
+import { getAppShellData } from "@/shared/services/app-shell.service";
 import { FloatingAgent } from "@/features/agent/components/FloatingAgent";
 
 export default async function CoursesPage() {
@@ -13,21 +14,24 @@ export default async function CoursesPage() {
   const courses = await getPublishedCourses(supabase);
   const initialLang = getServerLang();
 
-  // Unlike /dashboard and /profile, this page is public (middleware does
-  // not gate it), so `user` really can be null here — hence the explicit
-  // branch instead of assuming a session the way those pages can.
-  const agentState = user ? await getAgentInitialState(supabase, user.id) : null;
+  // Unlike /dashboard, this page is public (middleware does not gate
+  // it), so `user` really can be null here — hence the explicit branch
+  // instead of assuming a session the way the signed-in-only pages can.
+  const [agentState, shellData] = user
+    ? await Promise.all([getAgentInitialState(supabase, user.id), getAppShellData(supabase, user.id)])
+    : [null, null];
 
   return (
-    <main dir={initialLang === "ar" ? "rtl" : "ltr"} className="min-h-screen px-5 py-10 max-w-6xl mx-auto">
-      <CoursesPageContent courses={courses} initialLang={initialLang} />
+    <>
+      <CoursesPageContent courses={courses} initialLang={initialLang} shell={shellData} />
       {user && agentState && (
         <FloatingAgent
           userId={user.id}
           initialChosenName={agentState.chosenName}
           initialNeedsNaming={agentState.needsNaming}
+          lang={initialLang}
         />
       )}
-    </main>
+    </>
   );
 }

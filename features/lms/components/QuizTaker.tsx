@@ -1,25 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useLang } from "@/shared/hooks/useLang";
+import { t } from "@/shared/i18n/translations";
+import { Lang } from "@/shared/types";
 import { Button } from "@/shared/components/Button";
 import { ErrorState } from "@/shared/components/Feedback";
 import { QuizForTaking } from "@/features/lms/services/quiz.service";
 
-export function QuizTaker({ quiz }: { quiz: QuizForTaking }) {
-  const { t } = useLang("ar");
+export function QuizTaker({ quiz, lang }: { quiz: QuizForTaking; lang: Lang }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ pendingReview: boolean; passed?: boolean; score: number } | null>(null);
 
   if (quiz.alreadyAttempted && !result) {
-    return <p className="text-sm text-ink-soft">{t("lms.quizAlreadyAttempted")}</p>;
+    return <p className="text-sm text-ink-soft">{t("lms.quizAlreadyAttempted", lang)}</p>;
   }
 
   async function handleSubmit() {
     if (Object.keys(answers).length < quiz.questions.length) {
-      setError(t("lms.answerAllQuestions"));
+      setError(t("lms.answerAllQuestions", lang));
       // The message renders above the questions; on a long quiz the
       // unanswered one being submitted from is usually below the fold.
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -35,12 +35,12 @@ export function QuizTaker({ quiz }: { quiz: QuizForTaking }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error || t("common.somethingWentWrong"));
+        setError(data?.error || t("common.somethingWentWrong", lang));
         return;
       }
       setResult(data);
     } catch {
-      setError(t("common.somethingWentWrong"));
+      setError(t("common.somethingWentWrong", lang));
     } finally {
       setLoading(false);
     }
@@ -50,11 +50,11 @@ export function QuizTaker({ quiz }: { quiz: QuizForTaking }) {
     return (
       <div className="text-center">
         {result.pendingReview ? (
-          <p className="font-semibold text-navy">{t("lms.quizPendingReview")}</p>
+          <p className="font-semibold text-navy">{t("lms.quizPendingReview", lang)}</p>
         ) : result.passed ? (
-          <p className="font-semibold text-navy">{t("lms.quizPassed")}</p>
+          <p className="font-semibold text-navy">{t("lms.quizPassed", lang)}</p>
         ) : (
-          <p className="font-semibold text-orange-dark">{t("lms.quizFailed")}</p>
+          <p className="font-semibold text-orange-dark">{t("lms.quizFailed", lang)}</p>
         )}
       </div>
     );
@@ -89,7 +89,7 @@ export function QuizTaker({ quiz }: { quiz: QuizForTaking }) {
         </div>
       ))}
       <Button onClick={handleSubmit} disabled={loading}>
-        {loading ? t("lms.quizSubmitting") : t("lms.quizSubmit")}
+        {loading ? t("lms.quizSubmitting", lang) : t("lms.quizSubmit", lang)}
       </Button>
     </div>
   );
