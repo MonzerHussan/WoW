@@ -5,6 +5,132 @@
  * a new hardcoded AR/EN pair inside a component again.
  */
 export const dictionary = {
+  nav: {
+    dashboard: { ar: "الرئيسية", en: "Dashboard" },
+    profile: { ar: "الملف الشخصي", en: "Profile" },
+    community: { ar: "المجتمع", en: "Community" },
+    course: { ar: "الدورة", en: "Course" },
+    projects: { ar: "المشاريع", en: "Projects" },
+    games: { ar: "الألعاب", en: "Games" },
+    assessments: { ar: "التقييمات", en: "Assessments" },
+    instructors: { ar: "الأساتذة", en: "Instructors" },
+    // AI Assist's own displayed label is the user's chosen agent name,
+    // not this literal string — this is only the fallback shown before
+    // a name has been chosen (same "no naming forced" rule as the agent
+    // feature itself).
+    aiAssistFallback: { ar: "مساعدك الذكي", en: "AI Assist" },
+    walletLabel: { ar: "كوينز", en: "coins" },
+    backToDashboard: { ar: "← الرئيسية", en: "← Dashboard" },
+  },
+
+  // Phase-1 visual mockup ONLY (owner instruction, navigation-restructuring
+  // batch item 7): a static Facebook/LinkedIn-style page with zero real
+  // functionality — no posts, connections, or groups are ever written to
+  // Supabase from here. See CommunityContent.tsx's own header comment.
+  community: {
+    title: { ar: "مجتمع WOW", en: "WOW Community" },
+    subtitle: {
+      ar: "تواصل مع زملائك في المسار المهني، شارك إنجازاتك، واكتشف مجموعات تهمك.",
+      en: "Connect with peers on the same career journey, share your wins, and discover groups you care about.",
+    },
+    composerPlaceholder: { ar: "شارك تحديثًا مع مجتمعك...", en: "Share an update with your community..." },
+    composerPostBtn: { ar: "نشر", en: "Post" },
+
+    shortcutsTitle: { ar: "اختصارات", en: "Shortcuts" },
+    shortcutNetwork: { ar: "شبكتي", en: "My Network" },
+    shortcutGroups: { ar: "مجموعاتي", en: "My Groups" },
+    shortcutSaved: { ar: "المحفوظات", en: "Saved" },
+    shortcutEvents: { ar: "الفعاليات", en: "Events" },
+
+    connectionsTitle: { ar: "أشخاص قد تعرفهم", en: "People you may know" },
+    connectCta: { ar: "تواصل", en: "Connect" },
+    connectedCta: { ar: "تم التواصل", en: "Connected" },
+
+    trendingTitle: { ar: "الأكثر تداولًا في WOW", en: "Trending in WOW" },
+    trend1: { ar: "كيف تبني Career DNA قويًا في 90 يومًا", en: "How to build a strong Career DNA in 90 days" },
+    trend2: { ar: "أسئلة مقابلات الشركات الناشئة", en: "Startup interview questions" },
+    trend3: { ar: "نصائح لاجتياز اختبار PMP من أول محاولة", en: "Tips to pass the PMP exam on your first try" },
+    trend4: { ar: "قصص نجاح من مجتمع WOW", en: "Success stories from the WOW community" },
+
+    groupsTitle: { ar: "مجموعات قد تعجبك", en: "Groups you might like" },
+    groupsJoinCta: { ar: "انضمام", en: "Join" },
+    groupsJoinedCta: { ar: "عضو", en: "Joined" },
+    groupsMembersLabel: { ar: "عضو", en: "members" },
+    group1Name: { ar: "دائرة PMP المصريين", en: "Egyptian PMP Circle" },
+    group2Name: { ar: "الانتقال إلى العمل الحر", en: "Transitioning to Freelance" },
+    group3Name: { ar: "خريجو مسار البرمجة", en: "Coding Track Graduates" },
+
+    conn1Name: { ar: "يوسف نجيب", en: "Youssef Naguib" },
+    conn1Field: { ar: "مسار تحليل البيانات", en: "Data Analysis Track" },
+    conn2Name: { ar: "منى كمال", en: "Mona Kamal" },
+    conn2Field: { ar: "مسار تصميم UX", en: "UX Design Track" },
+    conn3Name: { ar: "خالد إبراهيم", en: "Khaled Ibrahim" },
+    conn3Field: { ar: "إدارة المشاريع", en: "Project Management" },
+    conn4Name: { ar: "نور حسن", en: "Nour Hassan" },
+    conn4Field: { ar: "الإنجليزية لسوق العمل", en: "English for Careers" },
+
+    post1Author: { ar: "أحمد صلاح", en: "Ahmed Salah" },
+    post1Role: { ar: "متدرب PMP", en: "PMP Candidate" },
+    post1Time: { ar: "قبل ساعتين", en: "2h ago" },
+    post1Tag: { ar: "إنجاز", en: "Milestone" },
+    post1Body: {
+      ar: "أنهيت أول اختبار في مسار PMP بنجاح! 🎉 خطوة كمان جوه الطريق للشهادة.",
+      en: "Just passed my first PMP-track quiz on WOW! 🎉 One more step toward the certification.",
+    },
+    post2Author: { ar: "لينا يوسف", en: "Lina Youssef" },
+    post2Role: { ar: "متدربة برمجة", en: "Software Trainee" },
+    post2Time: { ar: "قبل 5 ساعات", en: "5h ago" },
+    post2Tag: { ar: "نقاش", en: "Discussion" },
+    post2Body: {
+      ar: "أي نصائح لأول مقابلة عمل بعد التخرج من مسار البرمجة؟ محتاجة أفكار عملية 🙏",
+      en: "Any tips for a first job interview right after finishing the coding track? Looking for practical advice 🙏",
+    },
+    post3Author: { ar: "عمر فتحي", en: "Omar Fathy" },
+    post3Role: { ar: "مستقل (Freelancer)", en: "Freelancer" },
+    post3Time: { ar: "قبل يوم", en: "1d ago" },
+    post3Tag: { ar: "مشروع", en: "Project" },
+    post3Body: {
+      ar: "سلّمت أول مشروع لي كمستقل من خلال منصة WOW النهاردة. رحلة Career DNA بجد بتفرق.",
+      en: "Delivered my first freelance project sourced through WOW today. The Career DNA journey really makes a difference.",
+    },
+    post4Author: { ar: "سارة عادل", en: "Sara Adel" },
+    post4Role: { ar: "مدرّبة", en: "Instructor" },
+    post4Time: { ar: "قبل يومين", en: "2d ago" },
+    post4Tag: { ar: "نصيحة", en: "Advice" },
+    post4Body: {
+      ar: "أهم حاجة في مقابلات العمل: اربط كل إجابة بدليل فعلي من شغلك، مش وصف عام.",
+      en: "The single biggest interview tip: back every answer with real evidence from your work, not a generic description.",
+    },
+  },
+
+  assessments: {
+    title: { ar: "التقييمات", en: "Assessments" },
+    placementTitle: { ar: "نتيجة تحديد المستوى", en: "Placement result" },
+    placementLevel: { ar: "المستوى", en: "Level" },
+    placementNotDone: { ar: "لم تُجرِ محادثة تحديد المستوى بعد.", en: "You haven't done the placement conversation yet." },
+    quizHistoryTitle: { ar: "سجل الاختبارات", en: "Quiz history" },
+    quizHistoryEmpty: { ar: "لا اختبارات مسجَّلة بعد.", en: "No quizzes taken yet." },
+    quizPendingReview: { ar: "بانتظار اعتماد المقيّم", en: "Pending assessor review" },
+    quizPassedLabel: { ar: "ناجح", en: "Passed" },
+    quizFailedLabel: { ar: "غير ناجح", en: "Not passed" },
+  },
+
+  instructors: {
+    title: { ar: "الأساتذة", en: "Instructors" },
+    intro: { ar: "الأساتذة المرتبطون بك — اطلب مساعدة أو شرحًا إضافيًا.", en: "Instructors linked to you — request extra help or explanation." },
+    empty: { ar: "لا أساتذة مرتبطين بك بعد.", en: "No instructors linked to you yet." },
+    available: { ar: "متاح", en: "Available" },
+    unavailable: { ar: "غير متاح", en: "Unavailable" },
+    priceLabel: { ar: "السعر", en: "Price" },
+    comingSoon: { ar: "طلب المساعدة قريبًا.", en: "Requesting help is coming soon." },
+  },
+
+  aiAssist: {
+    settingsTitle: { ar: "الإعدادات", en: "Settings" },
+    settingsComingSoon: { ar: "الإعدادات التفصيلية قريبًا.", en: "Detailed settings coming soon." },
+    recommendationsTitle: { ar: "آخر التوصيات", en: "Recent recommendations" },
+  },
+
   common: {
     langAr: { ar: "AR", en: "AR" },
     langEn: { ar: "EN", en: "EN" },
@@ -33,6 +159,10 @@ export const dictionary = {
     emailNotConfirmed: {
       ar: "بريدك غير مؤكَّد بعد — افتح رسالة التأكيد المرسلة إلى بريدك.",
       en: "Your email isn't confirmed yet — check your inbox for the confirmation link.",
+    },
+    confirmEmailSent: {
+      ar: "أنشأنا حسابك! افتح بريدك الإلكتروني واضغط على رابط التأكيد لتفعيل حسابك، ثم سجّل الدخول.",
+      en: "Your account is created! Check your email and click the confirmation link to activate it, then log in.",
     },
     rateLimit: {
       ar: "محاولات كثيرة خلال وقت قصير — انتظر قليلًا ثم حاول مجددًا.",
@@ -505,6 +635,10 @@ export const dictionary = {
       en: "Your coin balance isn't enough for this task.",
     },
     languageTaskAlreadySubmitted: { ar: "لقد سلّمت هذه المهمة من قبل.", en: "You've already submitted this task." },
+    entityDecisionTitle: { ar: "قرارك", en: "Your decision" },
+    entityDecisionSubmit: { ar: "تأكيد القرار", en: "Confirm decision" },
+    entityDecisionSubmitting: { ar: "جارِ الحفظ...", en: "Saving..." },
+    entityDecisionFailed: { ar: "تعذّر حفظ القرار", en: "Couldn't save the decision" },
     spellcheckToggle: { ar: "التصحيح الإملائي التلقائي", en: "Automatic spellcheck" },
     walletBalance: { ar: "رصيدك", en: "Your balance" },
     coinsUnit: { ar: "كوينز", en: "coins" },
@@ -540,8 +674,404 @@ export const dictionary = {
     rejoinSession: { ar: "الدخول مرة أخرى", en: "Rejoin" },
   },
 
+  projects: {
+    // Course-page banner (037) — the only "moment of birth" trigger,
+    // since no first-visit hook exists anywhere in the app. Always
+    // visible, never dismissed permanently: creating a project costs
+    // coins with no cap (owner decision), so the CTA stays live for a
+    // second, third, Nth project the same way it did for the first.
+    bannerTitleFirst: { ar: "ابدأ مشروعك الحي", en: "Start your Living Project" },
+    bannerBodyFirst: {
+      ar: "طبّق كل ما تتعلمه على مشروع حقيقي باسمك — من أول يوم.",
+      en: "Apply everything you learn to a real project of your own — from day one.",
+    },
+    newProjectCta: { ar: "مشروع جديد", en: "New project" },
+    myProjectsLink: { ar: "مشاريعي", en: "My projects" },
+
+    newProjectModalTitle: { ar: "مشروع حي جديد", en: "New Living Project" },
+    fieldName: { ar: "اسم المشروع", en: "Project name" },
+    fieldSector: { ar: "القطاع", en: "Sector" },
+    fieldCountry: { ar: "الدولة", en: "Country" },
+    fieldOrganization: { ar: "المنظمة", en: "Organization" },
+    costPrefix: { ar: "التكلفة:", en: "Cost:" },
+    coinsUnit: { ar: "كوينز", en: "coins" },
+    create: { ar: "إنشاء المشروع", en: "Create project" },
+    creating: { ar: "جارِ الإنشاء...", en: "Creating..." },
+    cancel: { ar: "إلغاء", en: "Cancel" },
+    errNameRequired: { ar: "اسم المشروع مطلوب.", en: "Project name is required." },
+    errInsufficientBalance: {
+      ar: "رصيد الكوينز لا يكفي لفتح مشروع جديد. اشحن محفظتك من صفحتك الشخصية.",
+      en: "Not enough coins to open a new project. Top up your wallet from your profile.",
+    },
+    errGeneric: { ar: "تعذّر إنشاء المشروع الآن.", en: "Couldn't create the project right now." },
+    createdCelebration: {
+      ar: "🎉 وُلد مشروعك الحي! لنبنِ بيان الأعمال أولًا.",
+      en: "🎉 Your Living Project is born! Let's build the business case first.",
+    },
+
+    // Workspace
+    workspaceBack: { ar: "مشاريعي", en: "My projects" },
+    tabOverview: { ar: "نظرة عامة", en: "Overview" },
+    tabBusinessCase: { ar: "بيان الأعمال", en: "Business case" },
+    tabCharter: { ar: "الميثاق", en: "Charter" },
+    tabDecisionLog: { ar: "سجل القرارات", en: "Decision log" },
+    readinessLabel: { ar: "جاهزية المشروع", en: "Project readiness" },
+    emptyProjectsTitle: { ar: "لا مشاريع بعد", en: "No projects yet" },
+    emptyProjectsBody: {
+      ar: "افتح مشروعك الحي الأول من صفحة الدورة.",
+      en: "Open your first Living Project from the course page.",
+    },
+
+    // Top risks widget (read-only) — the full register lives in the
+    // Level 2 lesson exercise (RiskRegisterBuilder); this is only the
+    // top-3 display embedded in the Overview tab.
+    topRisksTitle: { ar: "أهم المخاطر", en: "Top risks" },
+    topRisksEmpty: {
+      ar: "لا مخاطر مسجّلة بعد — سجّلها من تمرين إدارة المخاطر بالمستوى الثاني.",
+      en: "No risks logged yet — record them from the Level 2 risk management exercise.",
+    },
+    riskScoreLabel: { ar: "الدرجة", en: "Score" },
+    riskStrategyAvoid: { ar: "تجنّب", en: "Avoid" },
+    riskStrategyMitigate: { ar: "تخفيف", en: "Mitigate" },
+    riskStrategyTransfer: { ar: "نقل", en: "Transfer" },
+    riskStrategyAccept: { ar: "قبول", en: "Accept" },
+
+    // Business case
+    businessCaseIntro: {
+      ar: "بيان أعمال مصغّر — أربعة أسئلة تحدّد لماذا هذا المشروع يستحق أن يُبنى.",
+      en: "A mini business case — four questions that decide why this project deserves to be built.",
+    },
+    fieldProblem: { ar: "المشكلة", en: "Problem" },
+    fieldOpportunity: { ar: "الفرصة", en: "Opportunity" },
+    fieldValueCase: { ar: "القيمة", en: "Value" },
+    fieldWhyNow: { ar: "لماذا الآن؟", en: "Why now?" },
+    save: { ar: "حفظ", en: "Save" },
+    saving: { ar: "جارِ الحفظ...", en: "Saving..." },
+    saved: { ar: "تم الحفظ", en: "Saved" },
+
+    // Charter (wizard, built on the onboarding wizard shape)
+    charterIntro: {
+      ar: "ميثاق مشروعك — وثيقة ميلاده الرسمية.",
+      en: "Your project's charter — its official birth certificate.",
+    },
+    fieldVision: { ar: "الرؤية", en: "Vision" },
+    fieldObjectives: { ar: "الأهداف", en: "Objectives" },
+    fieldDeliverables: { ar: "المخرجات", en: "Deliverables" },
+    fieldSponsorName: { ar: "اسم الراعي (Sponsor)", en: "Sponsor name" },
+    fieldSponsorAuthority: { ar: "صلاحيات الراعي وتوقعاته", en: "Sponsor authority & expectations" },
+    fieldCoreTeam: { ar: "الفريق الأساسي", en: "Core team" },
+    coreTeamName: { ar: "الاسم", en: "Name" },
+    coreTeamRole: { ar: "الدور", en: "Role" },
+    addTeamMember: { ar: "إضافة عضو", en: "Add member" },
+    fieldAssumptions: { ar: "الافتراضات", en: "Assumptions" },
+    fieldConstraints: { ar: "القيود", en: "Constraints" },
+    addAssumption: { ar: "إضافة افتراض", en: "Add assumption" },
+    addConstraint: { ar: "إضافة قيد", en: "Add constraint" },
+    remove: { ar: "حذف", en: "Remove" },
+    approveCharter: { ar: "اعتماد الميثاق", en: "Approve charter" },
+    approving: { ar: "جارِ الاعتماد...", en: "Approving..." },
+    charterApproved: { ar: "✅ الميثاق معتمد", en: "✅ Charter approved" },
+    charterApprovedOn: { ar: "اعتُمد في", en: "Approved on" },
+
+    // Decision log
+    decisionLogIntro: {
+      ar: "كل قرار يُسجَّل — من أول لحظة.",
+      en: "Every decision gets logged — from the first moment.",
+    },
+    fieldSituation: { ar: "الموقف", en: "Situation" },
+    fieldDecisionText: { ar: "القرار", en: "Decision" },
+    fieldReason: { ar: "السبب", en: "Reason" },
+    fieldCategory: { ar: "التصنيف (اختياري)", en: "Category (optional)" },
+    categoryAssumption: { ar: "افتراض", en: "Assumption" },
+    categoryConstraint: { ar: "قيد", en: "Constraint" },
+    categoryRisk: { ar: "خطر", en: "Risk" },
+    addDecision: { ar: "إضافة قرار", en: "Add decision" },
+    adding: { ar: "جارِ الإضافة...", en: "Adding..." },
+    emptyDecisionLog: { ar: "لا قرارات مسجَّلة بعد.", en: "No decisions logged yet." },
+    // The one system-generated row (037's log_charter_approval trigger)
+    // is recognized by category='milestone' and rendered through here —
+    // never by displaying its stored situation/decision/reason columns
+    // verbatim, which are slugs, not prose (see the migration's own
+    // comment on why).
+    milestoneCharterApproved: { ar: "🏁 اعتماد الميثاق", en: "🏁 Charter approved" },
+    tabGames: { ar: "الألعاب", en: "Games" },
+  },
+
+  games: {
+    // Course-page unlock banner (038) — the generic variant unlocks all
+    // five games at once, the moment the single Level 1 final quiz is
+    // assessor-approved. The project variant needs no unlock at all
+    // (lives in /project/[id] instead), so this banner only ever talks
+    // about the generic side.
+    unlockedBannerTitle: { ar: "🎮 ألعاب المستوى الأول مفتوحة!", en: "🎮 Level 1 games are unlocked!" },
+    unlockedBannerBody: {
+      ar: "اجتزت الاختبار النهائي — خمس ألعاب بانتظارك الآن.",
+      en: "You passed the final assessment — five games are waiting for you now.",
+    },
+    lockedBannerTitle: { ar: "🎮 ألعاب المستوى الأول", en: "🎮 Level 1 games" },
+    lockedBannerBody: {
+      ar: "تُفتح دفعة واحدة فور اجتياز الاختبار النهائي المعتمد.",
+      en: "They all unlock together once your final assessment is approved.",
+    },
+    viewGamesCta: { ar: "عرض الألعاب", en: "View games" },
+
+    hubTitle: { ar: "ألعاب المستوى الأول", en: "Level 1 Games" },
+    hubIntro: {
+      ar: "نسخة عامة تدربك على سيناريو جاهز — النسخة المرتبطة بمشروعك الحي موجودة داخل صفحة مشروعك.",
+      en: "A generic variant that practices on a ready-made scenario — the variant tied to your real project lives inside your project page.",
+    },
+    backToCourse: { ar: "← رجوع للدورة", en: "← Back to course" },
+
+    costPrefix: { ar: "التكلفة:", en: "Cost:" },
+    coinsUnit: { ar: "كوينز", en: "coins" },
+    playCta: { ar: "العب", en: "Play" },
+    playing: { ar: "جارِ البدء...", en: "Starting..." },
+    submitting: { ar: "جارِ الإرسال...", en: "Submitting..." },
+    submit: { ar: "إرسال", en: "Submit" },
+    retryCta: { ar: "أعد المحاولة", en: "Try again" },
+
+    errInsufficientBalance: {
+      ar: "رصيد الكوينز لا يكفي لهذه اللعبة. اشحن محفظتك من صفحتك الشخصية.",
+      en: "Not enough coins for this game. Top up your wallet from your profile.",
+    },
+    errQuizNotPassed: {
+      ar: "هذه اللعبة تُفتح بعد اجتياز الاختبار النهائي واعتماده.",
+      en: "This game unlocks after your final assessment is passed and approved.",
+    },
+    errGeneric: { ar: "تعذّر بدء اللعبة الآن.", en: "Couldn't start the game right now." },
+
+    completedTitle: { ar: "🏅 أحسنت!", en: "🏅 Well done!" },
+    completedBadgeEarned: { ar: "حصلت على شارة", en: "You earned the badge" },
+    notYetTitle: { ar: "قريب!", en: "Almost there!" },
+    notYetBody: {
+      ar: "لم تكتمل معايير الإنجاز بعد — يمكنك إعادة المحاولة بلا رسوم إضافية.",
+      en: "You haven't met the completion criteria yet — you can retry at no extra cost.",
+    },
+
+    // Charter Builder
+    charterBuilderTitle: { ar: "بناء الميثاق", en: "Charter Builder" },
+    charterBuilderDesc: {
+      ar: "ابنِ ميثاق مشروع خطوة بخطوة واعتمده رسميًا.",
+      en: "Build a project charter step by step and formally approve it.",
+    },
+    charterBuilderBadgeName: { ar: "بطل الميثاق", en: "Charter Master" },
+    charterBuilderProjectHint: {
+      ar: "هذه النسخة تستخدم ميثاق مشروعك الحقيقي — أكمِله واعتمده من تبويب «الميثاق»، ثم عد هنا.",
+      en: "This variant uses your real project's charter — complete and approve it from the Charter tab, then come back here.",
+    },
+    approveCheckbox: {
+      ar: "أوافق على اعتماد هذا الميثاق كما هو",
+      en: "I approve this charter as written",
+    },
+
+    // Stakeholder Detective
+    stakeholderDetectiveTitle: { ar: "محقق أصحاب المصلحة", en: "Stakeholder Detective" },
+    stakeholderDetectiveDesc: {
+      ar: "صنّف أصحاب المصلحة على مصفوفة القوة والاهتمام.",
+      en: "Classify stakeholders on the power/interest grid.",
+    },
+    stakeholderDetectiveBadgeName: { ar: "محلل أصحاب المصلحة", en: "Stakeholder Analyst" },
+    fieldStakeholderName: { ar: "اسم صاحب المصلحة", en: "Stakeholder name" },
+    fieldQuadrant: { ar: "التصنيف", en: "Quadrant" },
+    fieldJustification: { ar: "المبرر", en: "Justification" },
+    addStakeholder: { ar: "إضافة صاحب مصلحة", en: "Add stakeholder" },
+    quadrantManageClosely: { ar: "قوة عالية + اهتمام عالٍ — أدِرهم عن قرب", en: "High power + high interest — manage closely" },
+    quadrantKeepSatisfied: { ar: "قوة عالية + اهتمام منخفض — أرضِهم", en: "High power + low interest — keep satisfied" },
+    quadrantKeepInformed: { ar: "قوة منخفضة + اهتمام عالٍ — أبقهم مطّلعين", en: "Low power + high interest — keep informed" },
+    quadrantMonitor: { ar: "قوة منخفضة + اهتمام منخفض — راقب فقط", en: "Low power + low interest — monitor" },
+    needAtLeastThree: { ar: "صنّف 3 أصحاب مصلحة على الأقل بمبرر لكل واحد.", en: "Classify at least 3 stakeholders, each with a justification." },
+
+    // Project vs Operations Race
+    spotterTitle: { ar: "سباق: مشروع أم عملية؟", en: "Project vs Operations Race" },
+    spotterDesc: {
+      ar: "صنّف كل عبارة بسرعة: مشروع أم عملية تشغيلية؟",
+      en: "Quickly classify each statement: a project, or an ongoing operation?",
+    },
+    spotterBadgeName: { ar: "راصد المشاريع", en: "Project Spotter" },
+    spotterInstructions: {
+      ar: "تحتاج 80% إجابات صحيحة على الأقل للفوز بالشارة.",
+      en: "You need at least 80% correct to win the badge.",
+    },
+    spotterProjectBtn: { ar: "مشروع", en: "Project" },
+    spotterOperationBtn: { ar: "عملية تشغيلية", en: "Operation" },
+    spotterScoreLabel: { ar: "نتيجتك", en: "Your score" },
+
+    // Assumptions & Constraints
+    assumptionsConstraintsTitle: { ar: "الافتراضات والقيود", en: "Assumptions & Constraints" },
+    assumptionsConstraintsDesc: {
+      ar: "صنّف عناصر مشروعك: افتراض، قيد، أم خطر؟",
+      en: "Classify your project's elements: assumption, constraint, or risk?",
+    },
+    assumptionsConstraintsBadgeName: { ar: "مفكر ناقد", en: "Critical Thinker" },
+    fieldItemText: { ar: "العنصر", en: "Item" },
+    addItem: { ar: "إضافة عنصر", en: "Add item" },
+    needAtLeastFourAcrossThree: {
+      ar: "صنّف 4 عناصر على الأقل، موزعة على الفئات الثلاث كلها.",
+      en: "Classify at least 4 items, spanning all three categories.",
+    },
+    projectVariantSavesToLog: {
+      ar: "في نسخة مشروعك، كل عنصر تصنّفه يُضاف تلقائيًا لسجل قراراتك الحقيقي.",
+      en: "In your project variant, every classified item is added automatically to your real decision log.",
+    },
+
+    // Strategy Alignment
+    strategyAlignmentTitle: { ar: "مواءمة الاستراتيجية", en: "Strategy Alignment" },
+    strategyAlignmentDesc: {
+      ar: "اربط مشروعك باستراتيجية المنظمة، واحصل على تغذية راجعة من وكيلك.",
+      en: "Connect your project to organizational strategy and get feedback from your agent.",
+    },
+    strategyAlignmentBadgeName: { ar: "مُحقق المواءمة", en: "Strategy Aligner" },
+    orgStrategyLabel: { ar: "استراتيجية المنظمة", en: "Organizational strategy" },
+    responsePlaceholder: {
+      ar: "اكتب جملة أو جملتين تربطان مشروعك بهذا الهدف...",
+      en: "Write one or two sentences connecting your project to this goal...",
+    },
+    feedbackLabel: { ar: "تغذية راجعة", en: "Feedback" },
+    strategyAlignmentProjectHint: {
+      ar: "هذه النسخة تستخدم بيانات مشروعك الحقيقي — اربطه باستراتيجية منظمته كما تراها.",
+      en: "This variant uses your real project — connect it to its organization's strategy as you see it.",
+    },
+
+    // Project workspace "Games" tab (v3 decision 2)
+    badgesTitle: { ar: "الشارات", en: "Badges" },
+    certificatesTitle: { ar: "الشهادات", en: "Certificates" },
+    noBadgesYet: { ar: "لا شارات بعد.", en: "No badges yet." },
+    projectVariantSectionTitle: { ar: "ألعاب مشروعك", en: "Your project's games" },
+    genericVariantSectionTitle: { ar: "الألعاب العامة", en: "Generic games" },
+    genericVariantLockedNotice: {
+      ar: "تُفتح دفعة واحدة فور اجتياز اختبار المستوى الأول النهائي واعتماده.",
+      en: "These all unlock together once your Level 1 final assessment is passed and approved.",
+    },
+  },
+
+  // Level 2 (Project Planning & Control) — Knowledge-Base-scored games
+  // (046). Only generic UI chrome lives here; scenario content (task
+  // names, choice labels, feedback) lives in kb_scenarios/kb_scoring_rules
+  // in the database, same split game_generic_scenarios' content already
+  // uses for Level 1.
+  level2: {
+    hubTitle: { ar: "ألعاب المستوى الثاني", en: "Level 2 Games" },
+    hubIntro: {
+      ar: "قرارات حقيقية تُقيَّم فورًا مقابل قاعدة معرفة، بلا انتظار.",
+      en: "Real decisions, scored instantly against a knowledge base — no waiting.",
+    },
+    costPrefix: { ar: "التكلفة:", en: "Cost:" },
+    coinsUnit: { ar: "كوينز", en: "coins" },
+    playCta: { ar: "ابدأ", en: "Start" },
+    starting: { ar: "جارِ البدء...", en: "Starting..." },
+    submitting: { ar: "جارِ التقييم...", en: "Grading..." },
+    submit: { ar: "إرسال للتقييم", en: "Submit for grading" },
+    retryCta: { ar: "أعد المحاولة", en: "Try again" },
+
+    errInsufficientBalance: {
+      ar: "رصيد الكوينز لا يكفي لهذه اللعبة. اشحن محفظتك من صفحتك الشخصية.",
+      en: "Not enough coins for this game. Top up your wallet from your profile.",
+    },
+    errGeneric: { ar: "تعذّر بدء اللعبة الآن.", en: "Couldn't start the game right now." },
+
+    passedTitle: { ar: "🏅 نجحت!", en: "🏅 Passed!" },
+    passedBadgeEarned: { ar: "حصلت على شارة", en: "You earned the badge" },
+    notPassedTitle: { ar: "لسه", en: "Not yet" },
+    notPassedBody: {
+      ar: "لم تصل لعتبة النجاح هذه المرة — أعد المحاولة (بكوينز جديدة) وراجع الملاحظات أدناه.",
+      en: "You didn't reach the passing threshold this time — retry (a new attempt costs coins) and review the feedback below.",
+    },
+    scoreLabel: { ar: "درجتك", en: "Your score" },
+
+    resourceOptimizerTitle: { ar: "محسّن الموارد", en: "Resource Optimizer" },
+    resourceOptimizerDesc: {
+      ar: "وزّع مهام الفريق على الموارد المتاحة، بما يحترم الطاقة والتبعيات.",
+      en: "Assign team tasks to available resources, respecting capacity and dependencies.",
+    },
+    evmSimulatorTitle: { ar: "محاكي القيمة المكتسبة", en: "EVM Simulator" },
+    evmSimulatorDesc: {
+      ar: "احسب CPI وSPI من بيانات مشروع حقيقية، واختر الاستجابة الإدارية الصحيحة.",
+      en: "Calculate CPI and SPI from real project data, then choose the right management response.",
+    },
+
+    teamLabel: { ar: "الفريق", en: "Team" },
+    tasksLabel: { ar: "المهام", en: "Tasks" },
+    hoursUnit: { ar: "ساعة", en: "hours" },
+    dependsOnLabel: { ar: "يعتمد على", en: "Depends on" },
+
+    cpiLabel: { ar: "مؤشر أداء التكلفة (CPI)", en: "Cost Performance Index (CPI)" },
+    spiLabel: { ar: "مؤشر أداء الجدول (SPI)", en: "Schedule Performance Index (SPI)" },
+    responseLabel: { ar: "الاستجابة الإدارية", en: "Management response" },
+    pvLabel: { ar: "القيمة المخطَّطة (PV)", en: "Planned Value (PV)" },
+    evLabel: { ar: "القيمة المكتسبة (EV)", en: "Earned Value (EV)" },
+    acLabel: { ar: "التكلفة الفعلية (AC)", en: "Actual Cost (AC)" },
+    cpiCorrect: { ar: "✓ CPI صحيح", en: "✓ CPI correct" },
+    cpiIncorrect: { ar: "✗ CPI غير صحيح", en: "✗ CPI incorrect" },
+    spiCorrect: { ar: "✓ SPI صحيح", en: "✓ SPI correct" },
+    spiIncorrect: { ar: "✗ SPI غير صحيح", en: "✗ SPI incorrect" },
+
+    reflectionTitle: { ar: "سجّل قرارك", en: "Record your decision" },
+    reflectionPlaceholder: { ar: "اكتب إجابتك هنا...", en: "Write your answer here..." },
+    reflectionSave: { ar: "احفظ في سجل القرارات", en: "Save to your decision log" },
+    reflectionSaving: { ar: "جارِ الحفظ...", en: "Saving..." },
+    reflectionSaved: { ar: "✓ تم الحفظ في سجل قرارات مشروعك.", en: "✓ Saved to your project's decision log." },
+    reflectionErrGeneric: { ar: "تعذّر الحفظ الآن.", en: "Couldn't save right now." },
+
+    wbsTitle: { ar: "هيكل تجزئة العمل (WBS)", en: "Work Breakdown Structure (WBS)" },
+    wbsDesc: {
+      ar: "ابنِ WBS حقيقي لمشروعك — عنصر جذر (اسمه اسم مشروعك) و3-5 حزم عمل رئيسية تحته.",
+      en: "Build a real WBS for your project — a root item (your project's name) and 3-5 main work packages under it.",
+    },
+    wbsLoading: { ar: "جارِ التحميل...", en: "Loading..." },
+    wbsProgress: { ar: "حزم العمل الرئيسية", en: "Main work packages" },
+    wbsNamePlaceholder: { ar: "اسم حزمة العمل...", en: "Work package name..." },
+    wbsAdd: { ar: "إضافة", en: "Add" },
+    wbsAdding: { ar: "جارِ الإضافة...", en: "Adding..." },
+    wbsAddChild: { ar: "+ إضافة تحته", en: "+ Add under" },
+    wbsDelete: { ar: "حذف", en: "Delete" },
+    wbsErrGeneric: { ar: "تعذّر تنفيذ العملية الآن.", en: "Couldn't complete that action right now." },
+    wbsErrHasChildren: { ar: "احذف الفروع الأول — هذا العنصر له عناصر تحته.", en: "Delete the branches first — this item has items under it." },
+
+    riskTitle: { ar: "سجل المخاطر", en: "Risk Register" },
+    riskDesc: {
+      ar: "سجّل مخاطر مشروعك الحقيقية — قيّم كل واحدة باحتمالية وتأثير، واختر استراتيجية استجابة.",
+      en: "Log your project's real risks — score each by probability and impact, and choose a response strategy.",
+    },
+    riskDescPlaceholder: { ar: "وصف المخاطرة...", en: "Risk description..." },
+    riskProbabilityLabel: { ar: "الاحتمالية", en: "Probability" },
+    riskImpactLabel: { ar: "التأثير", en: "Impact" },
+    riskResponseLabel: { ar: "استراتيجية الاستجابة", en: "Response strategy" },
+    riskLevel1: { ar: "1 — منخفضة جدًا", en: "1 — Very low" },
+    riskLevel2: { ar: "2 — منخفضة", en: "2 — Low" },
+    riskLevel3: { ar: "3 — متوسطة", en: "3 — Medium" },
+    riskLevel4: { ar: "4 — عالية", en: "4 — High" },
+    riskLevel5: { ar: "5 — عالية جدًا", en: "5 — Very high" },
+    riskAdd: { ar: "إضافة مخاطرة", en: "Add risk" },
+    riskAdding: { ar: "جارِ الإضافة...", en: "Adding..." },
+    riskDelete: { ar: "حذف", en: "Delete" },
+    riskEmpty: { ar: "لا مخاطر مسجّلة بعد.", en: "No risks logged yet." },
+    riskErrGeneric: { ar: "تعذّر تنفيذ العملية الآن.", en: "Couldn't complete that action right now." },
+
+    burndownTitle: { ar: "قارئ Burndown", en: "Burndown Reader" },
+    burndownDesc: {
+      ar: "راجع جدول سبرنت حقيقي، وفسّر إيه اللي بيقوله عن أداء الفريق.",
+      en: "Review a real sprint table, and interpret what it says about team performance.",
+    },
+    burndownDayLabel: { ar: "اليوم", en: "Day" },
+    burndownIdealLabel: { ar: "المتبقي المثالي", en: "Ideal remaining" },
+    burndownActualLabel: { ar: "المتبقي الفعلي", en: "Actual remaining" },
+
+    finalBossTitle: { ar: "Final Boss — محاكي الأزمات", en: "Final Boss — Crisis Simulator" },
+    finalBossDesc: {
+      ar: "4-6 سيناريوهات عشوائية من أزمات حقيقية — قرار واحد لكل سيناريو، بلا وقت محدود لكن السرعة تكسر التعادل.",
+      en: "4-6 random scenarios from real crises — one decision per scenario, no hard time limit, but speed breaks ties.",
+    },
+    finalBossScenarioOf: { ar: "سيناريو", en: "Scenario" },
+    contentScoreLabel: { ar: "درجة القرارات", en: "Decision score" },
+    speedBonusLabel: { ar: "مكافأة السرعة", en: "Speed bonus" },
+  },
+
   profile: {
     title: { ar: "ملفك الشخصي", en: "Your profile" },
+    avatarChange: { ar: "غيّر الصورة", en: "Change photo" },
+    avatarUploading: { ar: "جارِ الرفع...", en: "Uploading..." },
+    avatarErrType: { ar: "الملف لازم يكون صورة.", en: "The file must be an image." },
+    avatarErrSize: { ar: "حجم الصورة كبير جدًا (الحد 3 ميجابايت).", en: "Image is too large (3MB max)." },
     dnaTitle: { ar: "توأمك الرقمي المهني", en: "Your Career DNA" },
     dnaEmpty: {
       ar: "لسه ما بنينا ملف الهوية المهنية الخاص فيك — يبدأ يتكوّن مع تقدمك بالدورات والاختبارات.",
@@ -556,6 +1086,8 @@ export const dictionary = {
     evidenceCount: { ar: "دليل", en: "pieces of evidence" },
     certificatesTitle: { ar: "الشهادات", en: "Certificates" },
     certificatesEmpty: { ar: "لا شهادات صادرة بعد.", en: "No certificates issued yet." },
+    gameBadgesTitle: { ar: "شارات الألعاب", en: "Game badges" },
+    gameBadgesEmpty: { ar: "لا شارات ألعاب بعد — العب من صفحة مشروعك.", en: "No game badges yet — play from your project page." },
     employabilityTitle: { ar: "درجة الجاهزية للتوظيف", en: "Employability score" },
     trustTitle: { ar: "درجة الثقة", en: "Trust score" },
     scoreNotComputed: { ar: "لم تُحسب بعد.", en: "Not computed yet." },
@@ -834,6 +1366,64 @@ export const dictionary = {
     capabilitiesGranting: { ar: "جارِ المنح...", en: "Granting..." },
     capabilitiesGranted: { ar: "تم المنح ✅", en: "Granted ✅" },
     capabilitiesGrantFailed: { ar: "تعذّر المنح", en: "Couldn't grant" },
+
+    contentNoPermission: {
+      ar: "هذه الصفحة مخصّصة لمن يملك صلاحية إدارة المحتوى (content.manage).",
+      en: "This page is for holders of the content-management permission (content.manage) only.",
+    },
+    contentPmpTitle: { ar: "إدارة محتوى PMP", en: "PMP content management" },
+    contentPmpIntro: {
+      ar: "كل تعديل يُحفظ كمسودة أولًا — المحتوى الحي (الدروس، السيناريوهات، الشارات) لا يتأثر إلا بعد ضغط \"نشر\" صريح.",
+      en: "Every edit is saved as a draft first — live content (lessons, scenarios, badges) is unaffected until you explicitly click Publish.",
+    },
+    contentEnglishTitle: { ar: "إدارة المحتوى الإنجليزي", en: "English content management" },
+    contentEnglishIntro: {
+      ar: "قواعد اللغة ومهام الكتابة الإنجليزية جزء من نفس دروس PMP — هذه الشاشة عرض مركّز على حقلَي القواعد ومهمة اللغة فقط، بنفس آلية المسودة/النشر.",
+      en: "English grammar and writing-task content lives inside the same PMP lessons — this screen is a focused view on just the grammar and language-task fields, with the same draft/publish flow.",
+    },
+    contentInvalidJson: { ar: "صيغة JSON غير صحيحة", en: "Invalid JSON" },
+    contentInvalidScore: { ar: "الدرجة يجب أن تكون رقمًا بين 0 و100", en: "Score must be a number between 0 and 100" },
+    contentSaveFailed: { ar: "تعذّر الحفظ", en: "Couldn't save" },
+    contentPublishFailed: { ar: "تعذّر النشر", en: "Couldn't publish" },
+    contentSaving: { ar: "جارِ الحفظ...", en: "Saving..." },
+    contentSaveDraft: { ar: "حفظ كمسودة", en: "Save as draft" },
+    contentPublish: { ar: "نشر", en: "Publish" },
+    contentPublishing: { ar: "جارِ النشر...", en: "Publishing..." },
+    contentPublished: { ar: "تم النشر ✅", en: "Published ✅" },
+    contentDraftSaved: { ar: "تم حفظ المسودة ✅", en: "Draft saved ✅" },
+    contentPendingDraft: { ar: "مسودة قيد الانتظار", en: "Pending draft" },
+    contentPendingDelete: { ar: "حذف قيد الانتظار", en: "Pending delete" },
+    contentEdit: { ar: "تعديل", en: "Edit" },
+    contentDelete: { ar: "حذف", en: "Delete" },
+    contentCancel: { ar: "إلغاء", en: "Cancel" },
+
+    contentScenariosHeading: { ar: "السيناريوهات (Final Boss وغيرها)", en: "Scenarios (Final Boss and others)" },
+    contentNewScenario: { ar: "+ سيناريو جديد", en: "+ New scenario" },
+    contentTitleAr: { ar: "العنوان (عربي)", en: "Title (Arabic)" },
+    contentTitleEn: { ar: "العنوان (إنجليزي)", en: "Title (English)" },
+    contentContextAr: { ar: "السياق (عربي)", en: "Context (Arabic)" },
+    contentContextEn: { ar: "السياق (إنجليزي)", en: "Context (English)" },
+    contentChoicesJson: { ar: "الاختيارات (JSON)", en: "Choices (JSON)" },
+
+    contentScoringRulesHeading: { ar: "قواعد التصحيح", en: "Scoring rules" },
+    contentFeedbackAr: { ar: "الملاحظة (عربي)", en: "Feedback (Arabic)" },
+    contentFeedbackEn: { ar: "الملاحظة (إنجليزي)", en: "Feedback (English)" },
+
+    contentBadgesHeading: { ar: "الشارات", en: "Badges" },
+    contentNewBadge: { ar: "+ شارة جديدة", en: "+ New badge" },
+    contentBadgeName: { ar: "اسم الشارة", en: "Badge name" },
+    contentBadgeDescription: { ar: "الوصف", en: "Description" },
+    contentBadgeIcon: { ar: "الأيقونة (إيموجي)", en: "Icon (emoji)" },
+
+    contentLessonsPmpHeading: { ar: "محتوى الدروس", en: "Lesson content" },
+    contentLessonsEnglishHeading: { ar: "قواعد اللغة ومهمة الكتابة لكل درس", en: "Grammar point and writing task per lesson" },
+    contentSelectModule: { ar: "اختر وحدة", en: "Select a module" },
+    contentSelectLesson: { ar: "اختر درسًا", en: "Select a lesson" },
+    contentLessonNotFound: { ar: "تعذّر تحميل الدرس", en: "Couldn't load the lesson" },
+    contentReviewStatus: { ar: "حالة المراجعة", en: "Review status" },
+    contentFullJson: { ar: "محتوى الدرس الكامل (JSON)", en: "Full lesson content (JSON)" },
+    contentGrammarPointJson: { ar: "القاعدة النحوية (JSON)", en: "Grammar point (JSON)" },
+    contentLanguageTaskJson: { ar: "مهمة الكتابة (JSON)", en: "Language task (JSON)" },
   },
 } as const;
 

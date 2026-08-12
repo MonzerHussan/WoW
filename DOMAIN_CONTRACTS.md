@@ -61,6 +61,23 @@ avoid legal complexity by design, not by disclaimer.**
   kind) is the agent's own KPI — if implementation rate drops, its prompts
   or targeting get revisited before adding new AI features.
 
+## 2d. Score-type registry (migration 043) — `career_scores.score_type` is data, not schema
+
+`career_scores.score_type` used to be a hardcoded `CHECK (... in
+('employability','promotion','trust'))`. 043 replaced it with a foreign
+key into `public.career_score_types` (`key`, `label_ar`, `label_en`,
+`dna_layer` — `'career' | 'leadership' | 'executive'`), seeded with
+today's three real types (all `dna_layer='career'`). **A future DNA layer
+(Leadership DNA at Level 3, Executive DNA at Level 4 —
+`ARCHITECTURE_levels2-4_strategy.md`) adds a new score type by INSERTing a
+row here, never by an ALTER TABLE migration.** T2 (mandatory explanation)
+and the time-series-never-updated-in-place rule apply unchanged to every
+row regardless of which `dna_layer` it belongs to — this migration only
+changes how the *set of valid score_type values* is declared, not
+`career_scores`' own shape or guarantees. `career_score_types` is
+signed-in-read, provisioned administratively (no client INSERT/UPDATE
+policy) — same treatment `instructor_profiles` gets in 040.
+
 ## 3. Jobs & Applications contract (tables in the Jobs sprint)
 
 ```
@@ -234,6 +251,28 @@ original PMP lessons remained visible and unchanged throughout.
 يتضمن إفصاحاً صريحاً بهذا. هذا يحمي المنصة من مسؤولية قانونية عن
 ادّعاء اعتماد لا نملكه.
 
+**مسار التدرّج اللغوي عبر المستويات 1-4 (معتمد من Monzer، 2026-08-06):**
+تقدير داخلي، مبني على مراجعة فعلية للـ18 نقطة قواعدية المنشورة فعليًا في
+المستوى 1 (migration 019) — لا يوجد أي توثيق سابق لمستوى CEFR مستهدف قبل
+هذا التاريخ، وهذا أول تقدير مكتوب. المستوى 1 يبدأ B1 (present perfect،
+first conditional، جمل وصفية) وينتهي عند حافة B2 (مبني للمجهول لسياق
+رسمي/تقني، فروق دلالية دقيقة كـcan/could، روابط سبب-نتيجة رسمية) — لا
+يوجد محتوى A1/A2 حقيقي في أي مكان، فالمستوى يفترض أساسًا قائمًا لا
+كورس مبتدئين.
+
+| المستوى | نطاق CEFR المستهدف (تقدير داخلي) |
+|---|---|
+| 1 | B1 → حافة B2 |
+| 2 | ترسيخ B2 |
+| 3 | B2 → حافة C1 |
+| 4 | ترسيخ C1 |
+
+**ملزم**: هذا الجدول **تقدير تصميم داخلي**، ليس نتيجة اختبار معتمَد ولا
+يقيس المهارات الأربع (لا استماع ولا تحدث ولا إنتاج كتابي اتقيّم فعليًا،
+قواعد ومفردات فقط). أي نص واجهة يعرض هذا الجدول أو أي جزء منه **يجب** أن
+يحمل نفس إفصاح `WOW Readiness Index` أعلاه — ممنوع عرضه كشهادة CEFR
+معتمدة تحت أي صياغة.
+
 ## 11. وضع حقل العمر بالنسبة لنطاقات الموافقة (وصفي، غير نهائي)
 
 الحقل `age` (`profiles`, migration 016) لا يصل اليوم لأي منظمة، لكن
@@ -290,3 +329,27 @@ original PMP lessons remained visible and unchanged throughout.
 مكالمة جارية. عميل معدَّل يستطيع تجاوز السقف. الخسارة محدودة (الكتلة
 مدفوعة مقدماً، ومكالمة واحدة نشطة لكل مستخدم)، والحد مُفصَح هنا بنفس
 معاملة §8 لحضور الجلسات المباشرة المُبلَّغ ذاتياً.
+
+## 13. الوصول إلى ألعاب المستوى الأول — النسخة العامة بلا شرط اختبار (migration 042 — تراجع متعمد)
+
+**الوضع الحالي (ملزم):** `play_game()` لا يفحص أي تاريخ اختبارات لنسخة
+`variant='generic'`. أي مستخدم مسجَّل برصيد كوينز كافٍ يستطيع بدء محاولة
+لعبة عامة، بلا أي شرط اجتياز اختبار من أي نوع. هذا القرار **صريح من
+المالك** (2026-08-06)، لا نتيجة عطل أو إسقاط سهو.
+
+**ما كان قائماً قبل 042 (038-040):** فحص إلزامي — محاولة اختبار ناجحة
+(`quiz_attempts.passed=true`) على اختبار `pmp_level=1 and lesson_id is
+null` — قبل قبول أي محاولة لعبة عامة. كان مبنياً ومُختبَراً فعلياً عبر
+ثلاث migrations متتالية (038-040)، لا نموذجاً أولياً.
+
+**لماذا يُسجَّل هذا هنا صراحة:** ROADMAP.md وتعليقات الكود
+(`042_games_generic_unlock_reversal.sql`، `GamesHub.tsx`،
+`ProjectGamesPanel.tsx`) توثّق نفس التراجع، لكن هذا الملف هو **العقد
+الملزم** — أي قرار مستقبلي بإعادة القفل، أو بناء ميزة تفترض وجوده
+(مثال: "امنح شارة عند اجتياز اختبار المستوى 1 ثم افتح الألعاب") يجب أن
+يبدأ من هنا لا من افتراض أن 038 لا يزال قائماً كما كُتب.
+
+**نسخة `project` (ألعاب المشروع) لم تتأثر إطلاقاً** — لم تحمل شرط اختبار
+من الأساس (وصول = تسجيل دخول + ملكية المشروع فقط، منذ 037/038).
+
+**لا تُعِد هذا القفل دون قرار جديد وصريح من المالك.**

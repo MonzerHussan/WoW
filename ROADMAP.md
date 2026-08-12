@@ -682,6 +682,145 @@ hybrid ما زال يدفع (حساب جديد `0 → 20` بعد الاعتما�
 كلياً**، لأن لا مشروع Supabase اختباري منفصل عن الإنتاج. نجاح CI ليس
 تغطية أمنية، وتبقى تلك الطبقة تحت قاعدة «أعد تشغيل الهجوم» اليدوية.
 
+**شاشة الأساتذة — ربط ثنائي الاتجاه ✅ (2026-08-06, migration 040 — اختبار حي كامل).**
+
+`instructor_profiles` (سعر بالكوينز + توفر) و`instructor_assignments`
+(طلب من المتعلم أو دعوة من المدرّب، نفس شكل الصف، `price_coins` لقطة من
+سعر المدرّب وقت الطلب). **هذه الجولة مخطط فقط — لا دفع فعلي ولا رسائل**:
+لا `spend_coins()` مربوط بأي مكان هنا، ولا جدول رسائل موجود؛ الشاشة
+الحالية (`InstructorsContent`) للقراءة فقط (تعرض الروابط القائمة، بلا
+أزرار طلب/قبول فعلية بعد).
+
+**أدلة حية (ثلاثة حسابات تجريبية: متعلم، مدرّب — مزروع صف
+`instructor_profiles` له يدويًا عبر SQL editor، ومهاجم):**
+- المتعلم يقرأ سعر المدرّب الحقيقي (20 كوينز) عبر سياسة "signed-in read" ✅.
+- طلب المتعلم بالسعر الحقيقي → **201** ✅؛ نفس الطلب بسعر مزوَّر (1 بدل
+  20) → **403/42501** ✅ (فحص `exists` ضد `instructor_profiles` الحي).
+- المهاجم يحاول انتحال `learner_id` متعلم آخر في INSERT → **403/42501**
+  ✅ (`learner_id = auth.uid()` في سياسة الإدراج).
+- دعوة المدرّب للمتعلم (الاتجاه المعاكس) → **201** ✅.
+- المهاجم يقرأ `instructor_assignments` وهو ليس طرفًا في أي صف →
+  **مصفوفة فارغة** ✅ (سياسة "participants read").
+- المدرّب يقبل طلب المتعلم (تغيير `status` فقط) → **200**، و`responded_at`
+  انضبط تلقائيًا بالمشغّل ✅.
+- **اختبار العبث الحاسم**: المدرّب يحاول قبول دعوته الخاصة **مع** تغيير
+  `price_coins` إلى 999 في نفس الطلب → **403/42501**، الرسالة "Only
+  status may change when responding to an assignment" ✅ — قراءة لاحقة
+  أكّدت أن `price_coins` بقي 20 و`status` بقي `pending` (المشغّل رفض
+  الصف كاملاً، لا تحديثًا جزئيًا).
+- المتعلم يرفض دعوة المدرّب (تغيير `status` فقط) → **200** ✅.
+- المهاجم يحاول الرد (قبول/رفض) على طلب المتعلم المقبول أصلاً وهو ليس
+  طرفًا فيه → **مصفوفة فارغة، صفر صفوف تأثرت** ✅ (سياسة UPDATE's USING
+  تستبعده تمامًا، لا حتى خطأ صريح)؛ قراءة لاحقة أكّدت أن الصف بقي
+  `accepted` بلا أي تغيير.
+- المهاجم يحاول انتحال هوية المدرّب (`instructor_id` حقيقي لكن
+  `auth.uid()` هو المهاجم) في دعوة instructor-initiated → **403/42501** ✅.
+
+**الفجوة المسجَّلة صراحة (ليست عطلاً، لم تُبنَ بعد):** لا مسار دفع فعلي
+(`price_coins` قابل للقراءة/الاقتباس فقط)، ولا نظام رسائل بين الطرفين
+بعد القبول. ينتظران قرار تصميم منفصل قبل البناء — غير مطروحين هنا.
+
+**تراجع متعمد عن قفل الألعاب (النسخة العامة) ✅ (2026-08-06, migration 042).**
+
+038 (ولاحقاً 039/040 أثناء اختبارها) بنى واختبر قفلاً صارماً في
+`play_game()`: النسخة العامة (`variant='generic'`) من ألعاب المستوى
+الأول كانت تُرفض بـ`'reason': 'quiz_not_passed'` ما لم يكن للمستخدم
+محاولة اختبار ناجحة على اختبار المستوى 1 الختامي (`pmp_level=1 and
+lesson_id is null`). كان القفل يعمل تماماً كما صُمِّم — **هذا ليس إصلاح
+عطل ولا رجوعاً عن خطأ سابق**.
+
+القرار تغيّر صراحة من المالك (Monzer) في جلسة 2026-08-06 ضمن دفعة إعادة
+هيكلة التنقّل: الألعاب (النسخة العامة) تُفتح الآن **بلا أي شرط اجتياز
+اختبار على الإطلاق**. التغيير الوحيد في `play_game()` (042) هو حذف كتلة
+فحص `v_quiz_passed`/`quiz_not_passed` من فرع النسخة العامة — كل شيء آخر
+(فحص ملكية المشروع لنسخة `project`، اختيار السيناريو، التسعير، خصم
+المحفظة) منسوخ حرفياً من 038. الواجهة تبعت نفس القرار: `GamesHub.tsx`
+و`ProjectGamesPanel.tsx` لم يعودا يستقبلان أو يفحصان `unlocked`/
+`gamesUnlocked` — قسم الألعاب العامة يُعرض دائماً بلا شرط. `hasPassedLevel1FinalQuiz()`
+(`features/games/services/game.service.ts`) بقيت موجودة (استعلام عام قد
+يفيد شاشة مستقبلية) لكنها لم تعد مستدعاة من أي مكان.
+
+**إذا وجدت جلسة مستقبلية الألعاب العامة مفتوحة بلا شرط اختبار وافترضت أن
+قفل 038-040 انكسر بالخطأ: لم ينكسر. حُذف عمداً، هنا، بطلب صريح من
+المالك. لا "تُصلح" هذا القفل دون قرار جديد وصريح من المالك.**
+
+## Sprint 3.5 — المستوى 2 (Project Planning & Control) — بدأ (2026-08-06)
+
+قرار معماري كامل موثَّق في `ARCHITECTURE_levels2-4_strategy.md`:
+Knowledge-Base-first (قواعد قرار حتمية، بلا LLM حي) عبر المستويات 2-4،
+مع بنية تحتية مشتركة تُبنى مرة واحدة وتتوسع لاحقًا (تفصيل §1 هناك).
+
+**منجز حتى الآن:**
+- `migration 043`: `career_score_types` (سجل مرجعي يحل محل CHECK ثابت
+  على `career_scores.score_type` — إضافة طبقة DNA مستقبلية = INSERT
+  بيانات لا migration؛ راجع DOMAIN_CONTRACTS.md §2d) + `project_wbs_items`
+  (WBS هرمي حقيقي عبر `parent_id` ذاتي المرجعية، بمشغّل يمنع أب من مشروع
+  مختلف أو تعيين الصف أبًا لنفسه). **مكتوب، لم يُشغَّل على Supabase
+  المالك بعد.**
+
+**لم يُبنَ بعد (الباقي من §1-§4 في البريف الأصلي):** محرك قواعد المعرفة
+(`kb_scoring_rules` + دالة تصحيح security definer بلا سياسات، بنفس نمط
+`quiz_answer_keys` من 028)، محرك السيناريوهات القابل لإعادة الاستخدام،
+خدمة القوالب السردية (Project Story)، محتوى الوحدات الدراسية 0-7 +
+Final Boss، لعبتا Resource Optimizer وEVM Simulator (تصميم أولي قيد
+المراجعة مع Monzer قبل البناء الكامل)، مفاتيح تسعير جديدة في
+`pricing_units`.
+
+## Sprint 3.6 — لوحتا إدارة المحتوى (PMP + English) — Draft→Publish (2026-08-09)
+
+بريف منفصل من Monzer بعد اكتمال المستوى 2 (migrations 037-061 مُختبَرة
+حيًا بالكامل، Final Boss شاملًا). بحث أولي قبل أي كود كشف تصحيحين
+جوهريين على فرضيات البريف الأصلي، اعتمدهما Monzer:
+
+1. **لا يوجد دومين محتوى إنجليزي منفصل فعليًا** — `grammar_point` و
+   `language_task` مفاتيح داخل `lessons.content` jsonb لنفس دروس PMP
+   (migrations 019/023)، لا جدول قائم بذاته. اللوحتان
+   (`/admin/content/pmp`, `/admin/content/english`) مسارا واجهة فقط
+   فوق نفس البيانات ونفس الدور (`content_manager`) — لا صلاحية منفصلة
+   ولا فصل حقول.
+2. **`pricing_units` استُبعِد بالكامل** من نطاق اللوحة الجديدة —
+   `RBAC.md:66-73` كان بالفعل رفض `content.manage` لتعديل الأسعار
+   عمدًا (يفتح تحكّمًا ماليًا لدور مُصمَّم أضيق من كده). التسعير يبقى
+   حصريًا على `/admin/pricing` الموجودة (`finance.edit_rates`، migration
+   024) — مفيش مسار كتابة ثانٍ مكرِّر.
+
+**منجز (migrations 062-063، مكتوبة، لم تُشغَّل على Supabase المالك بعد):**
+- `content_drafts` + `publish_content_draft()`: مسودة/نشر عام لـ
+  `kb_scenarios`/`kb_scoring_rules`/`badges` فقط (الجداول التلاتة اللي
+  مفيهاش أي آلية مراجعة حالية) — يدعم إنشاء/تعديل/حذف، RLS مقفولة على
+  `content.manage`، `published` status لا يُكتَب إلا عبر الدالة (062).
+- سياسة قراءة جديدة ضيّقة على `kb_scoring_rules` لـ`content.manage` —
+  كانت صفر سياسات عمدًا (046) لحماية مفتاح الإجابات من اللاعبين، لكن
+  content_manager محتاج يشوف الدرجات/الملاحظات عشان يعدّلها.
+- **فجوة أمنية حقيقية اتصلحت أثناء البناء**: `lessons` كان أصلاً عنده
+  UPDATE مباشر غير مقيّد لـ`content_manager` (015b) — إعادة استخدام
+  `review_status` وحدها ما كانتش هتمنع اختفاء درس حي وقت التعديل.
+  الحل المعتمد من Monzer: عمود `draft_content jsonb` جديد + دالتا
+  `save_lesson_draft()`/`publish_lesson_draft()` — تعديل درس منشور
+  بالفعل يُكتَب في `draft_content` فقط، الدرس الحي يفضل زي ما هو لحد
+  نشر صريح؛ درس جديد لسه مالوش نسخة منشورة يستخدم `review_status='draft'`
+  البسيطة (مفيش حاجة حية تختفي أصلًا).
+- **تسريب عمود مكتشَف ومُغلَق أثناء البناء**: RLS صفّي فقط — درس
+  `approved` ظاهر للطالب أصلًا، فطلب REST مباشر لعمود `draft_content`
+  كان هيرجّعه حتى لو كود الواجهة نفسه ما بيطلبوش أبدًا. الإصلاح:
+  `revoke select (draft_content) on lessons from authenticated, anon`
+  + دالتا `list_lessons_for_admin()`/`get_lesson_for_admin()` كمسار
+  وحيد للقراءة (نفس نمط عزل `kb_scoring_rules`، لكن على مستوى عمود لا
+  جدول كامل).
+- واجهة: `/admin/content/pmp` (شجرة كورس→وحدة→درس + محرري
+  kb_scenarios/kb_scoring_rules/badges) و`/admin/content/english` (نفس
+  الشجرة، محرر مركّز على `grammar_point`/`language_task` فقط) — نفس
+  نمط `/admin/roles` بالضبط (فحص `content.manage` سيرفري قبل أي بيانات،
+  الحد الحقيقي في RLS/الدوال). محررات نصية بسيطة (JSON خام في textarea)
+  حسب نطاق البريف §7 — بلا محرر غني.
+- `npx tsc --noEmit` وE `npm run lint` وE `npm run build` كلهم عدّوا بلا
+  أخطاء بعد البناء.
+
+**لم يُنفَّذ بعد:** تشغيل migrations 062-063 على Supabase المالك،
+التحقق الحي الكامل (هجوم RLS على `content_drafts` بحساب متعلم عادي،
+تدفق مسودة→نشر فعلي لسيناريو Final Boss أثناء محاولة لعب حقيقية جارية
+— البند الصريح في §6 من البريف الأصلي).
+
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal
 ## Sprint 6 — Gamification (expand beyond current points/level/badges)
@@ -941,3 +1080,49 @@ refund policy (036 built the codebase's only refund path, so there is now
 a pattern to follow rather than invent), and whether trainers are
 platform staff, contractors, or a third category the RBAC model does not
 yet have.
+
+### 6. سوق كوتشات حقيقيين — `#coach-marketplace`
+
+Raised while sizing the Living Project foundation (037): the owner wants
+a trainee able to pay coins for a **real human coach** to follow them on
+their own project specifically — not a generic booked session, ongoing
+mentorship tied to one project's lifecycle. Explicitly out of scope for
+037 and recorded here as its own named backlog item per the owner's own
+instruction, not folded into §5 above even though the two overlap
+substantially: both need a coach/trainer identity in RBAC, a matching
+mechanism, and a real-time or async communication channel. §5 is
+general-purpose paid coaching sessions (English, PM/management, booked
+ad hoc); this is coaching **scoped to a specific Living Project** — closer
+in shape to how `placement_reviews`/`workforce_contracts` (Sprint 2.2)
+already track a real relationship over time than to a one-off booking.
+When this is prioritized, a real sizing pass needs at minimum: a `coach`
+capability/role addition to the existing RBAC model (RBAC.md), a
+trainee↔coach matching mechanism, some scheduling/session-tracking shape,
+and a decision on whether coaching happens inside the project workspace
+(seeing the charter, business case, decision log directly) or through a
+separate channel — the former is far more valuable given everything 037
+just built for a coach to actually look at, but also raises a real access-
+control question (a coach reading a trainee's project is not the trainee's
+own RLS-scoped read, so it needs its own policy, not an extension of the
+owner-only ones 037 shipped). This deserves its own execution brief the
+same way 037 got one, not an extension bolted onto either 037 or the
+Level-1 games task.
+
+### 7. تسعير ديناميكي بالذكاء الاصطناعي — `#dynamic-ai-pricing`
+
+Raised while resolving the Level-1 games pricing decision (10
+`pricing_units` keys, one per game × variant, all editable from
+`/admin/pricing`): the owner wants a future mechanism where those coin
+prices (and other `pricing_units` rows — `new_project`, `pronunciation_practice`,
+etc.) adjust themselves via an AI/model-driven process instead of a human
+manually editing the admin table — e.g. reacting to demand, completion
+rates, or some other signal not yet defined. Explicitly out of scope for
+the games task or any current migration; no schema, cron job, or pricing
+logic should be built for this now. `pricing_units` already being a
+single central table with no hardcoded prices in code (024, extended by
+036/037) means a dynamic-pricing job would have exactly one place to
+write to when this is eventually prioritized — but the actual design
+questions (what signal drives a price change, how often, bounded by what
+floor/ceiling so a bad run can't price a feature out of reach, who
+approves or reviews an automated change before it goes live) are entirely
+unresolved and need their own brief, not a guess baked in here.

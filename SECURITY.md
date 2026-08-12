@@ -373,6 +373,16 @@ Hybrid review does not mitigate it — the assessor sees a score, and a cheated 
 
 **Known residue:** `009_seed_pmp_level1.sql` still contains `correct_index` inside its jsonb, per the never-edit-old-migrations rule. Re-seeding a fresh database therefore needs 009 **then** 028; 028's self-check fails loudly if the key is ever present again, and `quiz.service.ts` keeps a defensive strip as a second net.
 
+## Living Project + Level 1 games — two known lessons applied proactively, not rediscovered (migrations 037-038, 2026-08-05/06)
+
+Two features built after this file's incidents above were designed to close the exact same holes from the start, rather than ship them and find them under a second live attack.
+
+**037 (Living Project — `projects`/`project_charters`/`decision_log`, paid creation, unlimited per trainee).** The original design brief predates the owner's coin-gated-creation decision and specified plain `for all using (owner)` RLS, which would have let any authenticated client `INSERT` a project directly over PostgREST for free — the same payment-bypass shape as the points/role holes above, just on a new table instead of an old one. `projects`/`project_charters` ship with **no INSERT policy at all**; `create_project()` (SECURITY DEFINER) is the only door, charging via `spend_coins()` before the insert, one transaction. Verified live with a second real account: direct `INSERT` on `projects` returns 403 with a named error, direct `SELECT`/`UPDATE` on another account's project/charter/decision_log return empty/zero-rows, and the account's own project is unchanged after the attempt.
+
+**038 (Level 1 games — `game_attempts`, 5 games × 2 variants).** Same payment-bypass shape applied to `game_attempts` (no INSERT policy, `play_game()` the only door). Separately, Project vs Operations Race is this feature's one auto-graded game — exactly the shape 028 (above) found exploitable in `quiz_questions`. Its answer key (`game_spotter_answer_keys`) ships from the start with RLS enabled and **zero policies**, identical to `quiz_answer_keys`; grading happens inside `complete_game_attempt()` (SECURITY DEFINER) and only an aggregate score is ever returned, never a per-statement breakdown.
+
+Not yet live-tested with a second real account the way 037/028 were (038 has not been run against Supabase as of this entry) — update this section with attack-replay evidence once it has, per this repo's own rule of testing the live behavior, not just the code.
+
 ## Two Beta launch blockers closed (migration 029 + wallet kill switch, 2026-07-29)
 
 **1. Durable cost cap on the placement conversation (TECH_DEBT #15).** The once-only guard on `/api/agent/placement` only fires after a *completed* placement, so start-abandon-restart was unbounded, and the only brake was an in-memory `rateLimit()` that resets on every deploy and cold start and multiplies by instance count on serverless.

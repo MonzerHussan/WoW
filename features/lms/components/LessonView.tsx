@@ -9,6 +9,7 @@ import { SpeakButton } from "@/shared/components/SpeakButton";
 import { LessonCompleteButton } from "@/features/lms/components/LessonCompleteButton";
 import { LanguageTaskCard } from "@/features/lms/components/LanguageTaskCard";
 import { PronunciationPractice } from "@/features/lms/components/PronunciationPractice";
+import { EntityDecisionCard, EntityDecisionScenario } from "@/features/lms/components/EntityDecisionCard";
 import { LessonDetail, resolveLanguageTask } from "@/features/lms/services/lesson.service";
 
 type Translate = (key: TranslationKey) => string;
@@ -168,6 +169,7 @@ export function LessonView({
     toolbox_ar?: string;
     module_closing?: ModuleClosing;
     grammar_point?: GrammarPoint;
+    entity_decisions?: EntityDecisionScenario[];
   };
   const localized = lesson.translations[lang] || lesson.translations["en"] || {};
   const toolboxText = lang === "ar" ? content.toolbox_ar : content.toolbox_en;
@@ -246,6 +248,11 @@ export function LessonView({
           pronunciationCost={pronunciationCost}
         />
       )}
+
+      {hasUser &&
+        content.entity_decisions?.map((scenario) => (
+          <EntityDecisionCard key={scenario.scenario_key} lessonId={lesson.id} scenario={scenario} lang={lang} />
+        ))}
 
       {hasUser && (
         <div className="mb-8">
