@@ -55,7 +55,7 @@ export function OnboardingWizard() {
         setError(translateAuthError(saveError, lang));
         return;
       }
-      router.push("/dashboard");
+      router.push("/profile");
     } catch (err) {
       setError(translateAuthError(err, lang));
     } finally {

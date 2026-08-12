@@ -82,6 +82,7 @@ export default async function LessonPage({ params }: { params: { id: string; les
           initialChosenName={agentState.chosenName}
           initialNeedsNaming={agentState.needsNaming}
           lessonId={lesson.id}
+          lang={initialLang}
         />
       )}
     </>
