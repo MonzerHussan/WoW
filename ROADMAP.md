@@ -784,7 +784,9 @@ Final Boss، لعبتا Resource Optimizer وEVM Simulator (تصميم أولي 
    حصريًا على `/admin/pricing` الموجودة (`finance.edit_rates`، migration
    024) — مفيش مسار كتابة ثانٍ مكرِّر.
 
-**منجز (migrations 062-063، مكتوبة، لم تُشغَّل على Supabase المالك بعد):**
+**منجز (migrations 062-063، مُشغَّلة فعليًا على Supabase المالك — تحقّق مباشر
+عبر تدقيق 2026-08-15: `information_schema.tables`/`pg_proc` تؤكدان وجود
+الكائنات، والمشروع تجاوزهما بـ11 migration كاملة إلى 074):**
 - `content_drafts` + `publish_content_draft()`: مسودة/نشر عام لـ
   `kb_scenarios`/`kb_scoring_rules`/`badges` فقط (الجداول التلاتة اللي
   مفيهاش أي آلية مراجعة حالية) — يدعم إنشاء/تعديل/حذف، RLS مقفولة على
@@ -816,10 +818,84 @@ Final Boss، لعبتا Resource Optimizer وEVM Simulator (تصميم أولي 
 - `npx tsc --noEmit` وE `npm run lint` وE `npm run build` كلهم عدّوا بلا
   أخطاء بعد البناء.
 
-**لم يُنفَّذ بعد:** تشغيل migrations 062-063 على Supabase المالك،
-التحقق الحي الكامل (هجوم RLS على `content_drafts` بحساب متعلم عادي،
-تدفق مسودة→نشر فعلي لسيناريو Final Boss أثناء محاولة لعب حقيقية جارية
-— البند الصريح في §6 من البريف الأصلي).
+**لم يُنفَّذ بعد:** التحقق الحي الكامل (هجوم RLS على `content_drafts`
+بحساب متعلم عادي، تدفق مسودة→نشر فعلي لسيناريو Final Boss أثناء محاولة
+لعب حقيقية جارية — البند الصريح في §6 من البريف الأصلي).
+
+## Sprint 3.7 — المستوى 3: التسليم والقيادة الرشيقة (Project Delivery &
+## Agile Leadership) (2026-08-12)
+
+بريف منفصل من Monzer بعد اكتمال لوحتي إدارة المحتوى (Sprint 3.6). بحث
+أولي قبل أي كود كشف ثلاثة تصحيحات على فرضيات البريف الأصلي (خدمة
+القوالب السردية كانت مؤجَّلة فعليًا من مستوى 2، لا مبنية كما افتُرض؛
+`dna_layer` موجود على `career_score_types` فقط لا `career_scores` نفسه؛
+ميثاق الشفافية T1-T9 لا ينطبق تلقائيًا على كيان غير فردي) — اعتمد
+Monzer الحلول الثلاثة (نطاق أضيق للقوالب السردية، توحيد Organizational
+DNA مع تصميم Team Memory، إعفاء T1-T9 مع الإبقاء على RLS العادية) قبل
+أي بناء.
+
+**منجز ومُختبَر حيًا بالكامل (تحقّق مباشر عبر تدقيق 2026-08-15:
+`information_schema.tables`/`pg_proc` + استعلامات مباشرة على صفوف
+`modules`):**
+- **نظام Entity Memory (064)**: أول حالة عبر-الدروس/عبر-الجلسات دائمة
+  في المنصة — `entity_memory_states`/`entity_memory_events` +
+  `apply_entity_memory_event()` (كيان `character`/`organization`/`board`،
+  تصفير عند 0-100، قيمة محايدة 50 افتراضيًا). RLS: المالك أو
+  `audit.read` يقرأ فقط؛ صفر سياسة كتابة — الدالة وحدها الكاتب.
+- **محرك القوالب السردية (065)**: `narrative_templates` +
+  `render_narrative_text()`/`render_narrative_document()` — موصول فعليًا
+  بأول قالبين فقط (نطاق المرحلة 1 المعتمد): Decision Log وEvidence
+  Report، مبني على بيانات حقيقية من `decision_log`/`skill_evidence`.
+- **ثماني وحدات عادية كاملة (0-7)، migrations 066-073**: Delivery
+  Kickoff · Agile Mindset & Scrum Leadership · Sprint Planning &
+  Execution · Team Leadership & EI · Stakeholder Communication · Hybrid
+  Project Delivery · Monitoring & Continuous Improvement · Project
+  Recovery & Crisis Leadership. كل وحدة: محتوى ثنائي اللغة كامل +
+  سيناريوهي قرار Entity Memory على الأقل، مُختبَرة حيًا (RPC مباشر
+  بحسابات اختبار جديدة + نقر فعلي عبر الموقع المنشور) قبل اعتبار كل
+  وحدة منتهية، بلا استثناء.
+- **جسر `decision_log` (070)**: علامة `log_decision: true` اختيارية لكل
+  سيناريو — عند تفعيلها، `submit_lesson_entity_decision()` تكتب صفًا
+  حقيقيًا في `decision_log` (نفس آلية استرجاع `project_id` المتّبعة في
+  `render_narrative_document`، غير معطِّلة لو المتعلم بلا مشروع بعد).
+  مفعَّلة على الوحدتين 2 و4 رجعيًا زي ما قرر Monzer، ثم 5-7 عند البناء
+  — قرارات مشروع حقيقية فقط، لا سيناريوهات علاقات/ذكاء عاطفي.
+- **شخصيات وكيان تنظيمي متسقان عبر كل الوحدات**: Sarah (قائدة الفريق)،
+  Ahmed (مطوّر Backend، ظهر أول مرة الوحدة 3)، المجلس التنفيذي الخمسة
+  (CEO/CFO/CTO/Sponsor/Ops Director)، وكيان `organization/org` بمقياس
+  `org_planning_maturity` — التراكم عبر الوحدات (لا إعادة تصفير) تأكد
+  حيًا بأرقام مطابقة تمامًا في كل وحدة.
+
+**فجوة صريحة — آخر ما ينقص المستوى:** **Final Boss (Mega Delivery
+Simulation) لم يبدأ إطلاقًا.** لا migration، لا محرك سيناريوهات، لا صف
+module بعنوان يحتوي "Final Boss" أو "Mega Delivery" مربوط بدورة
+المستوى 3 — تأكّد بالفحص المباشر (استعلام مباشر على `modules`، صفر
+نتيجة) وقت تدقيق 2026-08-15، لا بالتخمين.
+
+**تسليم الأستاذ (migration 040 + 074)**: شاشة `/instructors` (نقل
+مستقل، سبق مستوى 3) امتدت بمسار قبول+دفع كامل —
+`accept_instructor_assignment()` (دالة جديدة ضيّقة النطاق تُضمِّن منطق
+`spend_coins()` الداخلي دون لمسها أو مناداتها بـ`p_user` مختلف عن
+`auth.uid()`، لأن كل مواقع نداء `spend_coins()` السبعة الحالية —
+وفحصها الداخلي نفسه — تفترض أن المنادي هو الدافع دائمًا، وهو غير صحيح
+هنا: الأستاذ يقبل، الطالب يدفع)، `instructor_messages`،
+`instructor_ratings` (نفس نمط `agent_messages`: صفر سياسة INSERT، دالة
+واحدة فقط تكتب). **مبني ومطبَّق على الإنتاج، لكن الاختبار الحي الكامل
+عبر الواجهة الفعلية (قبول/رفض/رسائل/هجوم/تقييم/رصيد غير كافٍ) لم
+يكتمل** — طُلب أثناء الجلسة وانقطع قبل وصول النتيجة. يحتاج جولة تحقّق
+منفصلة قبل اعتبار البند مغلقًا.
+
+**ملاحظة تشغيلية بنيوية (اكتُشفت أثناء تدقيق 2026-08-15، يحتاجها كل من
+يأتي بعدك):** هذا المشروع **لا يملك جدول تتبّع ترحيلات مُفعَّلًا** —
+كل migration من الأول نُفِّذ يدويًا بلصق SQL في محرر Supabase مباشرة،
+لا عبر `supabase db push` أو أي آلية مُتتبَّعة. `list_migrations` على
+مشروع Supabase الفعلي يرجّع قائمة فاضية دائمًا، بصرف النظر عن عدد
+الملفات الحقيقي في `supabase/migrations/`. **الطريقة الوحيدة الموثوقة
+لمعرفة آخر migration مُطبَّق فعليًا هي فحص الكائنات مباشرة** —
+`information_schema.tables`/`information_schema.columns` للجداول،
+`pg_proc`/`pg_get_functiondef()` للدوال، واستعلام مباشر على الصفوف
+الفعلية لمحتوى مثل وحدات المناهج — لا الاعتماد على رقم آخر ملف موجود
+في المستودع ولا على أي جدول تتبّع.
 
 ## Sprint 4 — Jobs
 ## Sprint 5 — Employer Portal
