@@ -44,11 +44,28 @@ export function LoginForm() {
 
     setLoading(true);
     try {
-      const { error: signInError } = await signIn(parsed.data);
+      const { data, error: signInError } = await signIn(parsed.data);
       if (signInError) {
         setError(translateAuthError(signInError, lang));
         return;
       }
+
+      // A password below the CURRENT policy still logs in — that is
+      // deliberate on Supabase's side and must stay that way, otherwise
+      // raising the policy would lock out every existing user. GoTrue
+      // signals it by returning the session together with a
+      // `weak_password` field; supabase-js 2.110.7 does NOT surface that
+      // as an error (its conversion runs only on non-2xx responses), so
+      // until now it was read by nobody and the user was never told.
+      //
+      // Handled as a notice, never a failure: the login succeeded, so
+      // blocking the redirect here would show a failure for something
+      // that worked. The user is sent on to /profile and told there.
+      const weak = (data?.user as { weak_password?: unknown } | undefined)?.weak_password;
+      if (weak) {
+        sessionStorage.setItem("wow.weakPassword", "1");
+      }
+
       router.push("/profile");
       router.refresh();
     } catch (err) {
@@ -98,6 +115,13 @@ export function LoginForm() {
         <Button type="submit" disabled={loading}>
           {loading ? t("auth.submittingLogin") : t("auth.submitLogin")}
         </Button>
+
+        {/* Without this link the recovery flow exists and nobody can
+            reach it — the exact shape of the 074 gap (a built backend
+            with no door in the UI). */}
+        <a href="/forgot-password" className="text-sm text-navy font-semibold text-center">
+          {t("auth.forgotLink")}
+        </a>
       </form>
     </AuthLayout>
   );

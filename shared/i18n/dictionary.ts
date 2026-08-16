@@ -168,9 +168,13 @@ export const dictionary = {
       ar: "محاولات كثيرة خلال وقت قصير — انتظر قليلًا ثم حاول مجددًا.",
       en: "Too many attempts — please wait a moment and try again.",
     },
+    // Matches the policy actually enforced since 2026-08-15 (10 chars +
+    // one of each character class). The previous text promised "8
+    // characters", which the server had already stopped accepting — a
+    // user following it exactly would be refused again.
     weakPassword: {
-      ar: "كلمة المرور ضعيفة — استخدم 8 أحرف على الأقل.",
-      en: "Password is too weak — use at least 8 characters.",
+      ar: "كلمة المرور ضعيفة — استخدم 10 أحرف على الأقل مع حرف كبير وحرف صغير ورقم ورمز.",
+      en: "Password is too weak — use at least 10 characters with an uppercase letter, a lowercase letter, a number and a symbol.",
     },
     invalidEmail: {
       ar: "البريد الإلكتروني غير صالح — تأكد من كتابته بشكل صحيح.",
@@ -234,6 +238,66 @@ export const dictionary = {
     continueWithGoogle: { ar: "المتابعة بحساب Google", en: "Continue with Google" },
     orDivider: { ar: "أو", en: "or" },
     errOAuth: { ar: "تعذّر بدء تسجيل الدخول عبر Google، حاول مرة أخرى.", en: "Couldn't start Google sign-in. Please try again." },
+
+    forgotLink: { ar: "نسيت كلمة المرور؟", en: "Forgot your password?" },
+    forgotEyebrow: { ar: "استعادة الحساب", en: "Account recovery" },
+    forgotTitle: { ar: "نسيت كلمة المرور؟", en: "Forgot your password?" },
+    forgotSubtitle: {
+      ar: "أدخل بريدك الإلكتروني وسنرسل لك رابطًا لتعيين كلمة مرور جديدة.",
+      en: "Enter your email and we'll send you a link to set a new password.",
+    },
+    forgotSubmit: { ar: "أرسل رابط الاستعادة", en: "Send recovery link" },
+    forgotSubmitting: { ar: "جارِ الإرسال...", en: "Sending..." },
+    // Deliberately identical whether or not the address has an account —
+    // a screen that distinguishes them is an account-enumeration tool.
+    forgotSent: {
+      ar: "إن كان لديك حساب بهذا البريد فستصلك رسالة تحتوي رابط تعيين كلمة مرور جديدة خلال دقائق. تحقّق من مجلد الرسائل غير المرغوب فيها أيضًا.",
+      en: "If an account exists for that email, a message with a password-reset link is on its way. Check your spam folder too.",
+    },
+    backToLogin: { ar: "← العودة لتسجيل الدخول", en: "← Back to log in" },
+
+    updatePwEyebrow: { ar: "كلمة مرور جديدة", en: "New password" },
+    updatePwTitle: { ar: "عيّن كلمة مرور جديدة", en: "Set a new password" },
+    updatePwSubtitle: {
+      ar: "اختر كلمة مرور قوية لن تستخدمها في مواقع أخرى.",
+      en: "Choose a strong password you don't use anywhere else.",
+    },
+    newPassword: { ar: "كلمة المرور الجديدة", en: "New password" },
+    confirmPassword: { ar: "تأكيد كلمة المرور", en: "Confirm password" },
+    updatePwSubmit: { ar: "حفظ كلمة المرور", en: "Save password" },
+    updatePwSubmitting: { ar: "جارِ الحفظ...", en: "Saving..." },
+    updatePwDone: {
+      ar: "تم تحديث كلمة المرور. جارِ تحويلك...",
+      en: "Password updated. Redirecting...",
+    },
+    updatePwVerifying: { ar: "جارِ التحقق من الرابط...", en: "Verifying your link..." },
+    // Shown when the recovery link is consumed, expired, or opened directly.
+    updatePwBadLink: {
+      ar: "هذا الرابط لم يعد صالحًا — رابط الاستعادة يُستخدم مرة واحدة وينتهي بعد مدة قصيرة. اطلب رابطًا جديدًا.",
+      en: "This link is no longer valid — recovery links work once and expire shortly. Request a new one.",
+    },
+    requestNewLink: { ar: "اطلب رابطًا جديدًا", en: "Request a new link" },
+
+    /** Kept in sync BY HAND with passwordPolicySchema and the Supabase
+     *  dashboard setting — there is no API to read the policy. */
+    passwordRulesTitle: { ar: "يجب أن تحتوي كلمة المرور على:", en: "Your password must contain:" },
+    passwordRuleLength: { ar: "10 أحرف على الأقل", en: "at least 10 characters" },
+    passwordRuleLower: { ar: "حرف إنجليزي صغير (a-z)", en: "a lowercase letter (a-z)" },
+    passwordRuleUpper: { ar: "حرف إنجليزي كبير (A-Z)", en: "an uppercase letter (A-Z)" },
+    passwordRuleDigit: { ar: "رقم (0-9)", en: "a number (0-9)" },
+    passwordRuleSymbol: { ar: "رمز مثل !@#$%", en: "a symbol such as !@#$%" },
+
+    /** Non-blocking notice after a SUCCESSFUL login whose password is
+     *  below the current policy. GoTrue returns the session AND a
+     *  `weak_password` field; supabase-js 2.110.7 does not raise it as an
+     *  error (that conversion only runs on non-2xx), so it was being
+     *  discarded silently until now. */
+    weakPasswordNotice: {
+      ar: "كلمة مرورك الحالية دون المعيار الجديد — يُنصح بتحديثها.",
+      en: "Your current password is below the new standard — we recommend updating it.",
+    },
+    weakPasswordNoticeAction: { ar: "حدّثها الآن", en: "Update it now" },
+    weakPasswordNoticeDismiss: { ar: "لاحقًا", en: "Later" },
   },
 
   onboarding: {

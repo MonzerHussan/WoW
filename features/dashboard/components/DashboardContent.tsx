@@ -9,6 +9,7 @@ import { ScoreCard } from "@/features/profile/components/ScoreCard";
 import { CapabilitiesPanel } from "@/features/profile/components/CapabilitiesPanel";
 import { WalletPanel } from "@/features/profile/components/WalletPanel";
 import { AvatarUpload } from "@/features/profile/components/AvatarUpload";
+import { WeakPasswordNotice } from "@/shared/components/WeakPasswordNotice";
 import { ProfileOverview, ScoreSummary, CoinPackageRow } from "@/features/profile/services/profile.service";
 
 interface DashboardProfile {
@@ -54,6 +55,11 @@ export function DashboardContent({
   return (
     <AppShell active="profile" walletBalance={walletBalance} agentChosenName={agentChosenName} lang={lang} dir={dir} onLangChange={setLang}>
       <main className="min-h-screen px-5 py-10 max-w-5xl mx-auto">
+        {/* Shown once after a sign-in whose password is below the current
+            policy. Lives here rather than on the login screen because the
+            login succeeded — see WeakPasswordNotice's own header. */}
+        <WeakPasswordNotice lang={lang} />
+
         <div className="flex items-center gap-4 mb-1">
           <AvatarUpload userId={userId} initialAvatarUrl={profile?.avatar_url ?? null} lang={lang} />
           <div>
