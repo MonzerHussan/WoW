@@ -123,6 +123,55 @@ export const dictionary = {
     unavailable: { ar: "غير متاح", en: "Unavailable" },
     priceLabel: { ar: "السعر", en: "Price" },
     comingSoon: { ar: "طلب المساعدة قريبًا.", en: "Requesting help is coming soon." },
+
+    // --- Instructor side: incoming requests (batch 1 of the delivery UI) ---
+    incomingTitle: { ar: "طلبات واردة", en: "Incoming requests" },
+    incomingIntro: {
+      ar: "طلبات دارسين يطلبون شرحًا منك. القبول يبدأ التسليم ويخصم الرسوم من رصيد الدارس فورًا.",
+      en: "Learners asking you for an explanation. Accepting starts the delivery and charges the learner's balance immediately.",
+    },
+    incomingEmpty: { ar: "لا طلبات واردة حاليًا.", en: "No incoming requests right now." },
+    requestContext: { ar: "طلب الدارس", en: "The learner's request" },
+    noContext: { ar: "لم يكتب الدارس تفاصيل.", en: "The learner didn't add details." },
+    // Stated before the button is pressed, not after — the instructor is
+    // authorising a charge against someone else's wallet.
+    chargeWarning: {
+      ar: "بقبولك يُخصم {price} كوينز من رصيد الدارس فورًا.",
+      en: "Accepting deducts {price} coins from the learner's balance immediately.",
+    },
+    accept: { ar: "قبول", en: "Accept" },
+    accepting: { ar: "جارِ القبول...", en: "Accepting..." },
+    decline: { ar: "رفض", en: "Decline" },
+    declining: { ar: "جارِ الرفض...", en: "Declining..." },
+    accepted: { ar: "مقبول", en: "Accepted" },
+    declined: { ar: "مرفوض", en: "Declined" },
+    pending: { ar: "بانتظار ردّك", en: "Awaiting your response" },
+    acceptedToast: { ar: "تم القبول وخُصم {price} كوينز من رصيد الدارس.", en: "Accepted — {price} coins were deducted from the learner's balance." },
+    declinedToast: { ar: "تم رفض الطلب.", en: "Request declined." },
+
+    // Every failure 074's function can produce, each with its own message.
+    // A single generic error would leave the instructor unable to tell
+    // "they can't afford it" from "someone already answered this".
+    errInsufficientBalance: {
+      ar: "رصيد الدارس غير كافٍ — لم يُخصم شيء ولم تتغيّر حالة الطلب. المطلوب {required} كوينز والمتاح لديه {balance}.",
+      en: "The learner's balance is too low — nothing was charged and the request is unchanged. {required} coins needed, {balance} available.",
+    },
+    errNotPending: {
+      ar: "هذا الطلب لم يعد بانتظار الرد — رُدَّ عليه بالفعل. حدّث الصفحة لرؤية حالته.",
+      en: "This request is no longer awaiting a response — it has already been answered. Refresh to see its current state.",
+    },
+    errNotAuthorized: {
+      ar: "لا تملك صلاحية الرد على هذا الطلب.",
+      en: "You're not allowed to respond to this request.",
+    },
+    errNotFound: {
+      ar: "لم يعد هذا الطلب موجودًا.",
+      en: "This request no longer exists.",
+    },
+    errUnknown: {
+      ar: "تعذّر إتمام العملية — لم يُخصم شيء. حاول مجددًا.",
+      en: "Couldn't complete that — nothing was charged. Please try again.",
+    },
   },
 
   aiAssist: {
