@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useLang } from "@/shared/hooks/useLang";
 import { translateAuthError } from "@/shared/i18n/supabase-errors";
 import { AuthLayout } from "@/shared/components/AuthLayout";
-import { FormField, Input } from "@/shared/components/Input";
+import { FormField } from "@/shared/components/Input";
+import { PasswordInput } from "@/shared/components/PasswordInput";
 import { Button } from "@/shared/components/Button";
 import { ErrorState, Loading } from "@/shared/components/Feedback";
 import { PasswordRules } from "@/features/auth/components/PasswordRules";
@@ -159,8 +160,8 @@ export function UpdatePasswordForm() {
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <FormField label={t("auth.newPassword")}>
-                <Input
-                  type="password"
+                <PasswordInput
+                  lang={lang}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
@@ -170,8 +171,8 @@ export function UpdatePasswordForm() {
               <PasswordRules value={password} lang={lang} />
 
               <FormField label={t("auth.confirmPassword")}>
-                <Input
-                  type="password"
+                <PasswordInput
+                  lang={lang}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   autoComplete="new-password"

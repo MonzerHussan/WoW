@@ -6,6 +6,7 @@ import { useLang } from "@/shared/hooks/useLang";
 import { translateAuthError } from "@/shared/i18n/supabase-errors";
 import { AuthLayout } from "@/shared/components/AuthLayout";
 import { FormField, Input } from "@/shared/components/Input";
+import { PasswordInput } from "@/shared/components/PasswordInput";
 import { Button } from "@/shared/components/Button";
 import { ErrorState } from "@/shared/components/Feedback";
 import { GoogleButton } from "@/features/auth/components/GoogleButton";
@@ -109,7 +110,12 @@ export function LoginForm() {
         </FormField>
 
         <FormField label={t("auth.password")}>
-          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+          <PasswordInput
+            lang={lang}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
         </FormField>
 
         <Button type="submit" disabled={loading}>

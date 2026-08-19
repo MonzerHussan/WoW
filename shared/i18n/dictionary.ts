@@ -298,6 +298,13 @@ export const dictionary = {
     },
     weakPasswordNoticeAction: { ar: "حدّثها الآن", en: "Update it now" },
     weakPasswordNoticeDismiss: { ar: "لاحقًا", en: "Later" },
+
+    /** aria-labels for the show/hide toggle. The label states the ACTION
+     *  the button performs, not the current state — aria-pressed already
+     *  carries the state, and a screen reader announcing both keeps them
+     *  from contradicting each other. */
+    showPassword: { ar: "إظهار كلمة المرور", en: "Show password" },
+    hidePassword: { ar: "إخفاء كلمة المرور", en: "Hide password" },
   },
 
   onboarding: {
