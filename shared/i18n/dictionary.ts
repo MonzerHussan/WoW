@@ -249,6 +249,47 @@ export const dictionary = {
       ar: "تعذّر إتمام العملية — لم يُخصم شيء. حاول مجددًا.",
       en: "Couldn't complete that — nothing was charged. Please try again.",
     },
+
+    // --- Conversations (batch 3). The conversation is symmetric: the
+    // same list, the same controls, for the learner and the instructor.
+    conversationsTitle: { ar: "المحادثات", en: "Conversations" },
+    conversationsIntro: {
+      ar: "المحادثة تبدأ بعد قبول الطلب — الطرفان يكتبان ويقرآن بالتساوي.",
+      en: "A conversation opens once the request is accepted — both sides read and write equally.",
+    },
+    chatOpen: { ar: "فتح", en: "Open" },
+    chatClose: { ar: "إغلاق", en: "Close" },
+    chatSend: { ar: "إرسال", en: "Send" },
+    chatSending: { ar: "جارِ الإرسال...", en: "Sending..." },
+    chatPlaceholder: { ar: "اكتب رسالتك...", en: "Write your message..." },
+    chatEmpty: {
+      ar: "لا رسائل بعد — ابدأ المحادثة.",
+      en: "No messages yet — start the conversation.",
+    },
+    chatOriginalRequest: { ar: "الطلب الأصلي", en: "Original request" },
+    // The counterpart's name comes from 077. When it is missing we show a
+    // role word, never the raw id — an identifier tells the reader
+    // nothing and exposes something.
+    chatUnnamedParty: { ar: "الطرف الآخر", en: "The other party" },
+    chatRoleLearner: { ar: "دارس", en: "Learner" },
+    chatRoleInstructor: { ar: "أستاذ", en: "Instructor" },
+
+    chatErrNotAccepted: {
+      ar: "لا يمكن الكتابة قبل قبول الطلب. حدّث الصفحة لرؤية حالته الحالية.",
+      en: "You can't write here until the request is accepted. Refresh to see its current state.",
+    },
+    chatErrNotAuthorized: {
+      ar: "لست طرفًا في هذه المحادثة.",
+      en: "You're not a participant in this conversation.",
+    },
+    chatErrEmpty: {
+      ar: "الرسالة فارغة.",
+      en: "The message is empty.",
+    },
+    chatErrUnknown: {
+      ar: "تعذّر إرسال الرسالة — نصّك ما زال في الحقل. حاول مجددًا.",
+      en: "Couldn't send that — your text is still in the box. Please try again.",
+    },
   },
 
   aiAssist: {

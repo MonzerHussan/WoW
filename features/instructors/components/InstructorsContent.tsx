@@ -8,13 +8,17 @@ import {
   MyInstructorLink,
   IncomingInstructorRequest,
   MyInstructorProfile,
+  InstructorConversation,
 } from "@/features/instructors/services/instructors.service";
 import { IncomingRequestsPanel } from "@/features/instructors/components/IncomingRequestsPanel";
 import { InstructorProfileForm } from "@/features/instructors/components/InstructorProfileForm";
+import { ConversationsPanel } from "@/features/instructors/components/ConversationsPanel";
 
 export function InstructorsContent({
   links,
   incomingRequests,
+  conversations,
+  myUserId,
   isInstructor,
   myProfile,
   walletBalance,
@@ -22,6 +26,12 @@ export function InstructorsContent({
   initialLang,
 }: {
   links: MyInstructorLink[];
+  /** Accepted assignments this user is a party to, either side. Both
+   *  parties get the same list and the same controls. */
+  conversations: InstructorConversation[];
+  /** Decides which bubbles are "mine". A plain string prop — no function
+   *  crosses the Server -> Client boundary anywhere on this page. */
+  myUserId: string;
   /** Requests addressed TO this user as an instructor. Empty unless
    *  they are an APPROVED instructor (078). */
   incomingRequests: IncomingInstructorRequest[];
@@ -46,6 +56,11 @@ export function InstructorsContent({
             no accept control for them — accepting is the instructor's act
             alone (074), and the invite direction was abolished in 076. */}
         {isInstructor && <IncomingRequestsPanel requests={incomingRequests} lang={lang} />}
+
+        {/* Above the profile form and the links list: once a request is
+            accepted, the live conversation is what the user came for.
+            Renders nothing at all when there are none. */}
+        <ConversationsPanel conversations={conversations} myUserId={myUserId} lang={lang} />
 
         {/* Open to every signed-in user: applying is how someone becomes
             an instructor since 078. For an existing profile the same

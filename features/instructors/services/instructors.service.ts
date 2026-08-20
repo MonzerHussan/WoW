@@ -63,15 +63,13 @@ export async function getAssignmentCounterparts(
  * re-reads the same column server-side when it actually charges (027's
  * rule: the client never supplies a price).
  *
- * NO LEARNER NAME. `profiles` SELECT is owner-only ("Profiles are
- * viewable by owner", plus a staff-only branch for role management), so
- * an instructor genuinely cannot read the requesting learner's name —
- * verified against pg_policies, not assumed. What the instructor gets
- * instead is the learner's own `context` note, the price and the date,
- * which is enough to accept or decline. Showing a name would need a new,
- * narrow profiles read policy scoped to assignment participants — a
- * security change that deserves its own round rather than riding along
- * with this UI.
+ * THE LEARNER'S NAME COMES FROM 077, NOT FROM A JOIN. `profiles` SELECT
+ * is owner-only ("Profiles are viewable by owner", plus a staff-only
+ * branch for role management), so an instructor cannot read the
+ * requesting learner's row and any embed silently resolves to null.
+ * `get_my_assignment_counterparts()` returns the name and avatar alone —
+ * two fields, never the row. (This comment previously said the name was
+ * unavailable, which was true before 077 and stale after it.)
  *
  * Since 076 only the learner can create an assignment, so every row here
  * is learner-initiated by construction; `initiated_by` is not surfaced.
@@ -102,6 +100,68 @@ export async function getIncomingInstructorRequests(
       createdAt: row.created_at,
       learnerName: cp?.name ?? null,
       learnerAvatarUrl: cp?.avatarUrl ?? null,
+    };
+  });
+}
+
+export interface InstructorConversation {
+  assignmentId: string;
+  /** The OTHER party, whoever the caller is. From 077 — display_name if
+   *  they are the instructor, full_name if they are the learner. Null
+   *  when the row has no name to show; the UI substitutes a label rather
+   *  than falling back to an id. */
+  counterpartName: string | null;
+  counterpartAvatarUrl: string | null;
+  /** Which side the CALLER is on — decides the header label only, never
+   *  what they may read or write (both are symmetric here). */
+  iAmInstructor: boolean;
+  context: string | null;
+  priceCoins: number;
+  createdAt: string;
+}
+
+/**
+ * Every conversation this user can hold: their ACCEPTED assignments,
+ * from either side.
+ *
+ * `status = 'accepted'` is a filter here, not a permission. The
+ * permission is in 074's send_instructor_message(), which returns
+ * `assignment_not_accepted` regardless of what the client asks for —
+ * so hiding a pending row from this list is a courtesy to the user, not
+ * the thing that stops them writing into it. Tested as such.
+ *
+ * One query for both sides. 040's "participants read" policy is already
+ * symmetric (`instructor_id = auth.uid() OR learner_id = auth.uid()`),
+ * so a single `.or()` needs no new policy — and deliberately so: the
+ * learner and the instructor are equals in a conversation, unlike in the
+ * request flow where only one of them may accept.
+ */
+export async function getMyConversations(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<InstructorConversation[]> {
+  const [{ data, error }, counterparts] = await Promise.all([
+    supabase
+      .from("instructor_assignments")
+      .select("id, instructor_id, learner_id, context, price_coins, created_at")
+      .eq("status", "accepted")
+      .or(`instructor_id.eq.${userId},learner_id.eq.${userId}`)
+      .order("created_at", { ascending: false }),
+    getAssignmentCounterparts(supabase),
+  ]);
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((row: any) => {
+    const cp = counterparts.get(row.id);
+    return {
+      assignmentId: row.id,
+      counterpartName: cp?.name ?? null,
+      counterpartAvatarUrl: cp?.avatarUrl ?? null,
+      iAmInstructor: row.instructor_id === userId,
+      context: row.context,
+      priceCoins: row.price_coins,
+      createdAt: row.created_at,
     };
   });
 }

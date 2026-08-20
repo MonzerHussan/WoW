@@ -6,6 +6,7 @@ import {
   getIncomingInstructorRequests,
   isInstructor as checkIsInstructor,
   getMyInstructorProfile,
+  getMyConversations,
 } from "@/features/instructors/services/instructors.service";
 import { getAppShellData } from "@/shared/services/app-shell.service";
 import { getAgentInitialState } from "@/features/agent/services/agent.service";
@@ -21,12 +22,17 @@ export default async function InstructorsPage() {
 
   if (!user) redirect("/login?redirectedFrom=/instructors");
 
-  const [links, shellData, agentState, instructor, myProfile] = await Promise.all([
+  // Conversations are fetched for EVERY user, not only instructors: a
+  // learner is a full party to their own accepted assignments, and
+  // gating this on the instructor check would hide the learner's side of
+  // every conversation they paid for.
+  const [links, shellData, agentState, instructor, myProfile, conversations] = await Promise.all([
     getMyInstructorLinks(supabase, user.id),
     getAppShellData(supabase, user.id),
     getAgentInitialState(supabase, user.id),
     checkIsInstructor(supabase, user.id),
     getMyInstructorProfile(supabase, user.id),
+    getMyConversations(supabase, user.id),
   ]);
 
   // Only fetched for actual instructors — a learner has no incoming
@@ -40,6 +46,8 @@ export default async function InstructorsPage() {
       <InstructorsContent
         links={links}
         incomingRequests={incomingRequests}
+        conversations={conversations}
+        myUserId={user.id}
         isInstructor={instructor}
         myProfile={myProfile}
         walletBalance={shellData.walletBalance}

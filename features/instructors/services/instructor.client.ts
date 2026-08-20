@@ -129,6 +129,102 @@ export async function reviewInstructor(
   return { ok: true, status: data.status };
 }
 
+export interface InstructorMsg {
+  id: string;
+  senderId: string;
+  content: string;
+  createdAt: string;
+}
+
+/**
+ * Reading a conversation. A plain SELECT, and that is not a gap: 074's
+ * "participants read" policy is the whole guard — it resolves the
+ * assignment and requires `auth.uid()` to be one of its two parties, so
+ * a third party gets an EMPTY ARRAY rather than an error. Zero rows is
+ * the refusal.
+ *
+ * That shape is why this is read back independently in testing: an empty
+ * array from a non-participant and an empty array from a conversation
+ * with no messages yet are indistinguishable here by design, so proving
+ * the refusal means writing a message first and confirming the third
+ * party still sees none.
+ */
+export async function getAssignmentMessages(assignmentId: string): Promise<InstructorMsg[]> {
+  const supabase = supabaseBrowser();
+  const { data, error } = await supabase
+    .from("instructor_messages")
+    .select("id, sender_id, content, created_at")
+    .eq("assignment_id", assignmentId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[instructors] message read failed:", error);
+    return [];
+  }
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    senderId: r.sender_id,
+    content: r.content,
+    createdAt: r.created_at,
+  }));
+}
+
+export type SendMessageResult =
+  | { ok: true; messageId: string }
+  | { ok: false; reason: SendMessageFailureReason };
+
+/** Mirrors exactly what 074's function returns, plus the 42501 it raises
+ *  for a non-participant, plus a catch-all. */
+export type SendMessageFailureReason =
+  | "empty_content"
+  | "assignment_not_found"
+  | "assignment_not_accepted"
+  | "not_authorized"
+  | "unknown";
+
+/**
+ * Sending. Through send_instructor_message() (074) and only through it —
+ * instructor_messages has NO INSERT policy at all, so there is no client
+ * path to fall back on and none to guard against. Same "no policy = no
+ * path, one verified function is the only writer" shape as agent_messages
+ * (033).
+ *
+ * The function re-checks everything server-side: authentication,
+ * participation (42501), non-empty content, and that the assignment is
+ * ACCEPTED. Nothing here is trusted to have filtered correctly — the UI
+ * only ever hides a control, it never grants one.
+ */
+export async function sendInstructorMessage(
+  assignmentId: string,
+  content: string
+): Promise<SendMessageResult> {
+  const supabase = supabaseBrowser();
+  const { data, error } = await supabase.rpc("send_instructor_message", {
+    p_assignment_id: assignmentId,
+    p_content: content,
+  });
+
+  if (error) {
+    console.error("[instructors] send message failed:", error);
+    return { ok: false, reason: error.code === "42501" ? "not_authorized" : "unknown" };
+  }
+
+  const result = data as { sent?: boolean; reason?: string; messageId?: string } | null;
+  if (result?.sent && result.messageId) {
+    return { ok: true, messageId: result.messageId };
+  }
+
+  const known: SendMessageFailureReason[] = [
+    "empty_content",
+    "assignment_not_found",
+    "assignment_not_accepted",
+  ];
+  const reason = known.includes(result?.reason as SendMessageFailureReason)
+    ? (result?.reason as SendMessageFailureReason)
+    : "unknown";
+  return { ok: false, reason };
+}
+
 export type DeclineResult = { ok: true } | { ok: false; reason: "not_pending" | "unknown" };
 
 /**
