@@ -147,6 +147,31 @@ export function IncomingRequestsPanel({
                 </span>
               </div>
 
+              {/* Name and avatar come from 077's function, never from a
+                  join — profiles is owner-only, so a join would silently
+                  resolve to null. A missing name falls back to a label
+                  rather than rendering blank. */}
+              <div className="flex items-center gap-2 mb-3">
+                {req.learnerAvatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={req.learnerAvatarUrl}
+                    alt=""
+                    className="w-8 h-8 rounded-full object-cover border border-line"
+                  />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="w-8 h-8 rounded-full bg-navy/10 flex items-center justify-center text-sm"
+                  >
+                    🧑
+                  </span>
+                )}
+                <span className="font-bold text-ink text-sm">
+                  {req.learnerName || t("instructors.unnamedLearner", lang)}
+                </span>
+              </div>
+
               <p className="text-xs font-bold text-ink-soft mb-1">
                 {t("instructors.requestContext", lang)}
               </p>

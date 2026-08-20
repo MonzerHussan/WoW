@@ -7,6 +7,46 @@ export interface IncomingInstructorRequest {
   priceCoins: number;
   context: string | null;
   createdAt: string;
+  /** From get_my_assignment_counterparts() (077). Null when the row has
+   *  no name to show — never a silent empty string. */
+  learnerName: string | null;
+  learnerAvatarUrl: string | null;
+}
+
+/**
+ * The counterpart's display name for every assignment the caller is a
+ * party to — one call for all of them (077).
+ *
+ * Deliberately NOT a join against `profiles`: that table's SELECT is
+ * owner-only, so a join from either side silently resolves to null.
+ * 077's SECURITY DEFINER function is the only path, and it returns
+ * exactly two fields (name + avatar) rather than the row — an RLS
+ * policy could not have done that, since RLS filters rows, not columns
+ * (the lesson 063 recorded for lessons.draft_content).
+ *
+ * The function also decides WHICH name: display_name when the
+ * counterpart is an instructor, full_name when they are a learner. That
+ * choice lives in the database precisely so an instructor's real name
+ * never leaves it, and so the same person shows one name everywhere.
+ */
+export async function getAssignmentCounterparts(
+  supabase: SupabaseClient
+): Promise<Map<string, { name: string | null; avatarUrl: string | null }>> {
+  const { data, error } = await supabase.rpc("get_my_assignment_counterparts");
+  if (error) {
+    // Never fatal: a missing name degrades the card, it does not break
+    // accepting or declining.
+    console.error("[instructors] counterpart lookup failed:", error.message);
+    return new Map();
+  }
+  const map = new Map<string, { name: string | null; avatarUrl: string | null }>();
+  for (const row of (data || []) as any[]) {
+    map.set(row.assignment_id, {
+      name: row.counterpart_name || null,
+      avatarUrl: row.counterpart_avatar_url || null,
+    });
+  }
+  return map;
 }
 
 /**
@@ -40,22 +80,30 @@ export async function getIncomingInstructorRequests(
   supabase: SupabaseClient,
   instructorId: string
 ): Promise<IncomingInstructorRequest[]> {
-  const { data, error } = await supabase
-    .from("instructor_assignments")
-    .select("id, learner_id, status, price_coins, context, created_at")
-    .eq("instructor_id", instructorId)
-    .order("created_at", { ascending: false });
+  const [{ data, error }, counterparts] = await Promise.all([
+    supabase
+      .from("instructor_assignments")
+      .select("id, learner_id, status, price_coins, context, created_at")
+      .eq("instructor_id", instructorId)
+      .order("created_at", { ascending: false }),
+    getAssignmentCounterparts(supabase),
+  ]);
 
   if (error) throw new Error(error.message);
 
-  return (data || []).map((row: any) => ({
-    assignmentId: row.id,
-    learnerId: row.learner_id,
-    status: row.status,
-    priceCoins: row.price_coins,
-    context: row.context,
-    createdAt: row.created_at,
-  }));
+  return (data || []).map((row: any) => {
+    const cp = counterparts.get(row.id);
+    return {
+      assignmentId: row.id,
+      learnerId: row.learner_id,
+      status: row.status,
+      priceCoins: row.price_coins,
+      context: row.context,
+      createdAt: row.created_at,
+      learnerName: cp?.name ?? null,
+      learnerAvatarUrl: cp?.avatarUrl ?? null,
+    };
+  });
 }
 
 /** Whether this user is set up as an instructor at all — the gate for

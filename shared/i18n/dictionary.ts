@@ -132,6 +132,10 @@ export const dictionary = {
     },
     incomingEmpty: { ar: "لا طلبات واردة حاليًا.", en: "No incoming requests right now." },
     requestContext: { ar: "طلب الدارس", en: "The learner's request" },
+    /** Shown when 077 returns no name — an account that never filled in
+     *  a full name, or an instructor with no display name. Never an
+     *  empty string in the UI. */
+    unnamedLearner: { ar: "دارس", en: "A learner" },
     noContext: { ar: "لم يكتب الدارس تفاصيل.", en: "The learner didn't add details." },
     // Stated before the button is pressed, not after — the instructor is
     // authorising a charge against someone else's wallet.
