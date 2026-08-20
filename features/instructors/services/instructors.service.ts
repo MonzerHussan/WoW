@@ -106,16 +106,105 @@ export async function getIncomingInstructorRequests(
   });
 }
 
-/** Whether this user is set up as an instructor at all — the gate for
- *  showing the incoming-requests panel. An instructor_profiles row is
- *  what makes someone an instructor in 040's model. */
+export interface MyInstructorProfile {
+  displayName: string;
+  bio: string | null;
+  expertiseTags: string[];
+  yearsExperience: number | null;
+  priceCoins: number;
+  isAvailable: boolean;
+  approvalStatus: "pending" | "approved" | "rejected";
+  needsReview: boolean;
+  reviewNote: string | null;
+}
+
+/**
+ * This user's own instructor profile, or null if they have never
+ * applied. Readable through 040's signed-in read policy — no special
+ * access needed for one's own row.
+ */
+export async function getMyInstructorProfile(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<MyInstructorProfile | null> {
+  const { data } = await supabase
+    .from("instructor_profiles")
+    .select("display_name, bio, expertise_tags, years_experience, price_coins, is_available, approval_status, needs_review, review_note")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!data) return null;
+  return {
+    displayName: data.display_name,
+    bio: data.bio,
+    expertiseTags: data.expertise_tags || [],
+    yearsExperience: data.years_experience,
+    priceCoins: data.price_coins,
+    isAvailable: data.is_available,
+    approvalStatus: data.approval_status,
+    needsReview: data.needs_review,
+    reviewNote: data.review_note,
+  };
+}
+
+/**
+ * Whether this user may act as an instructor — i.e. show the incoming
+ * requests panel. Since 078 a row alone is not enough: a pending or
+ * rejected applicant has a row but is not an instructor, and learners
+ * cannot request them (the replaced 040 policy demands approval), so
+ * they would only ever see an empty panel.
+ */
 export async function isInstructor(supabase: SupabaseClient, userId: string): Promise<boolean> {
   const { data } = await supabase
     .from("instructor_profiles")
     .select("user_id")
     .eq("user_id", userId)
+    .eq("approval_status", "approved")
     .maybeSingle();
   return !!data;
+}
+
+export interface InstructorReviewRow {
+  userId: string;
+  displayName: string;
+  bio: string | null;
+  expertiseTags: string[];
+  yearsExperience: number | null;
+  priceCoins: number;
+  approvalStatus: "pending" | "approved" | "rejected";
+  needsReview: boolean;
+  updatedAt: string;
+}
+
+/**
+ * The owner's review queue: ONE list with TWO reasons — a new
+ * application (`pending`) or an approved profile edited afterwards
+ * (`needs_review`). Kept as one queue because the owner's decision is
+ * the same in both cases; the caller distinguishes them by the flags.
+ *
+ * Reading these rows needs no special policy: instructor_profiles has
+ * been signed-in readable since 040. `users.manage` gates the ACTION,
+ * not the sight of it — and the action is gated inside the function.
+ */
+export async function listInstructorsForReview(supabase: SupabaseClient): Promise<InstructorReviewRow[]> {
+  const { data, error } = await supabase
+    .from("instructor_profiles")
+    .select("user_id, display_name, bio, expertise_tags, years_experience, price_coins, approval_status, needs_review, updated_at")
+    .or("approval_status.eq.pending,needs_review.eq.true")
+    .order("updated_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map((r: any) => ({
+    userId: r.user_id,
+    displayName: r.display_name,
+    bio: r.bio,
+    expertiseTags: r.expertise_tags || [],
+    yearsExperience: r.years_experience,
+    priceCoins: r.price_coins,
+    approvalStatus: r.approval_status,
+    needsReview: r.needs_review,
+    updatedAt: r.updated_at,
+  }));
 }
 
 export interface MyInstructorLink {

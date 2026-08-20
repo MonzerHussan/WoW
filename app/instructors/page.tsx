@@ -5,6 +5,7 @@ import {
   getMyInstructorLinks,
   getIncomingInstructorRequests,
   isInstructor as checkIsInstructor,
+  getMyInstructorProfile,
 } from "@/features/instructors/services/instructors.service";
 import { getAppShellData } from "@/shared/services/app-shell.service";
 import { getAgentInitialState } from "@/features/agent/services/agent.service";
@@ -20,11 +21,12 @@ export default async function InstructorsPage() {
 
   if (!user) redirect("/login?redirectedFrom=/instructors");
 
-  const [links, shellData, agentState, instructor] = await Promise.all([
+  const [links, shellData, agentState, instructor, myProfile] = await Promise.all([
     getMyInstructorLinks(supabase, user.id),
     getAppShellData(supabase, user.id),
     getAgentInitialState(supabase, user.id),
     checkIsInstructor(supabase, user.id),
+    getMyInstructorProfile(supabase, user.id),
   ]);
 
   // Only fetched for actual instructors — a learner has no incoming
@@ -39,6 +41,7 @@ export default async function InstructorsPage() {
         links={links}
         incomingRequests={incomingRequests}
         isInstructor={instructor}
+        myProfile={myProfile}
         walletBalance={shellData.walletBalance}
         agentChosenName={shellData.agentChosenName}
         initialLang={initialLang}

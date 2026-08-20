@@ -7,22 +7,29 @@ import { Card, EmptyState } from "@/shared/components/Feedback";
 import {
   MyInstructorLink,
   IncomingInstructorRequest,
+  MyInstructorProfile,
 } from "@/features/instructors/services/instructors.service";
 import { IncomingRequestsPanel } from "@/features/instructors/components/IncomingRequestsPanel";
+import { InstructorProfileForm } from "@/features/instructors/components/InstructorProfileForm";
 
 export function InstructorsContent({
   links,
   incomingRequests,
   isInstructor,
+  myProfile,
   walletBalance,
   agentChosenName,
   initialLang,
 }: {
   links: MyInstructorLink[];
   /** Requests addressed TO this user as an instructor. Empty unless
-   *  they have an instructor_profiles row. */
+   *  they are an APPROVED instructor (078). */
   incomingRequests: IncomingInstructorRequest[];
   isInstructor: boolean;
+  /** This user's own instructor profile, or null if they never applied.
+   *  Drives the apply/edit form — everyone sees it, since applying is
+   *  open to any signed-in user since 078. */
+  myProfile: MyInstructorProfile | null;
   walletBalance: number;
   agentChosenName: string;
   initialLang: Lang;
@@ -39,6 +46,11 @@ export function InstructorsContent({
             no accept control for them — accepting is the instructor's act
             alone (074), and the invite direction was abolished in 076. */}
         {isInstructor && <IncomingRequestsPanel requests={incomingRequests} lang={lang} />}
+
+        {/* Open to every signed-in user: applying is how someone becomes
+            an instructor since 078. For an existing profile the same
+            form edits it, and shows its review state. */}
+        <InstructorProfileForm profile={myProfile} lang={lang} />
 
         {links.length === 0 ? (
           <EmptyState message={t("instructors.empty")} icon="🧑‍🏫" />

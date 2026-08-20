@@ -136,6 +136,79 @@ export const dictionary = {
      *  a full name, or an instructor with no display name. Never an
      *  empty string in the UI. */
     unnamedLearner: { ar: "دارس", en: "A learner" },
+
+    // --- Becoming an instructor (078) ---
+    applyTitle: { ar: "كن أستاذًا", en: "Become an instructor" },
+    applyIntro: {
+      ar: "قدّم ملفك، ويراجعه فريق WOW. لن يظهر للدارسين قبل الاعتماد.",
+      en: "Submit your profile for the WOW team to review. It stays hidden from learners until approved.",
+    },
+    displayName: { ar: "اسم العرض", en: "Display name" },
+    displayNameHint: {
+      ar: "الاسم الذي يراه الدارسون — يمكن أن يختلف عن اسمك في ملفك الشخصي.",
+      en: "The name learners see — it can differ from the one on your personal profile.",
+    },
+    bio: { ar: "نبذة", en: "Bio" },
+    expertiseTags: { ar: "مجالات الخبرة", en: "Areas of expertise" },
+    expertiseHint: { ar: "افصل بينها بفاصلة", en: "Separate with commas" },
+    yearsExperience: { ar: "سنوات الخبرة", en: "Years of experience" },
+    priceLabelOwn: { ar: "سعرك لكل طلب (كوينز)", en: "Your price per request (coins)" },
+    priceHintOwn: {
+      ar: "يمكنك تغييره متى شئت — الطلبات القائمة تحتفظ بسعرها وقت إنشائها.",
+      en: "Change it whenever you like — existing requests keep the price they were created at.",
+    },
+    applySubmit: { ar: "إرسال الطلب", en: "Submit application" },
+    applyResubmit: { ar: "إعادة الإرسال", en: "Resubmit" },
+    saveProfile: { ar: "حفظ التعديلات", en: "Save changes" },
+    applySaving: { ar: "جارِ الإرسال...", en: "Submitting..." },
+    applyFailed: { ar: "تعذّر إرسال الطلب.", en: "Couldn't submit the application." },
+
+    statusPending: { ar: "قيد المراجعة", en: "Under review" },
+    statusPendingHint: {
+      ar: "طلبك وصل. لن تظهر للدارسين حتى يعتمده فريق WOW.",
+      en: "We have your application. You stay hidden from learners until the WOW team approves it.",
+    },
+    statusApproved: { ar: "معتمَد", en: "Approved" },
+    statusRejected: { ar: "غير معتمَد", en: "Not approved" },
+    statusRejectedHint: {
+      ar: "يمكنك تعديل ملفك وإعادة إرساله.",
+      en: "You can edit your profile and submit it again.",
+    },
+    reviewNoteLabel: { ar: "ملاحظة المراجعة", en: "Reviewer's note" },
+    needsReviewBadge: { ar: "عُدِّل بعد الاعتماد", en: "Edited after approval" },
+    needsReviewHint: {
+      ar: "تعديلاتك ظاهرة للدارسين، وفريق WOW سيراجعها.",
+      en: "Your edits are live for learners, and the WOW team will review them.",
+    },
+    // Availability is the instructor's own switch — approval is not.
+    availabilityTitle: { ar: "استقبال الطلبات", en: "Accepting requests" },
+    availabilityOn: { ar: "أستقبل طلبات جديدة", en: "I'm accepting new requests" },
+    availabilityOff: { ar: "متوقف مؤقتًا", en: "Paused" },
+    availabilityHint: {
+      ar: "أوقفه مؤقتًا حين لا تستطيع الاستجابة — لا يؤثر على اعتمادك.",
+      en: "Pause it when you can't respond — it doesn't affect your approval.",
+    },
+    availabilityBlocked: {
+      ar: "لا يمكن الظهور قبل الاعتماد.",
+      en: "You can't appear to learners before approval.",
+    },
+
+    // --- Owner's review queue ---
+    reviewQueueTitle: { ar: "طلبات الأساتذة", en: "Instructor applications" },
+    reviewQueueIntro: {
+      ar: "طلبات جديدة، وملفات معتمَدة عُدِّلت بعد الاعتماد.",
+      en: "New applications, and approved profiles edited since.",
+    },
+    reviewQueueEmpty: { ar: "لا طلبات بانتظار المراجعة.", en: "Nothing waiting for review." },
+    newApplication: { ar: "طلب جديد", en: "New application" },
+    reviewApprove: { ar: "اعتماد", en: "Approve" },
+    reviewReject: { ar: "رفض", en: "Reject" },
+    reviewWorking: { ar: "جارِ التنفيذ...", en: "Working..." },
+    reviewNotePlaceholder: { ar: "ملاحظة للأستاذ (اختياري)", en: "Note for the instructor (optional)" },
+    reviewApproved: { ar: "تم الاعتماد.", en: "Approved." },
+    reviewRejected: { ar: "تم الرفض.", en: "Rejected." },
+    reviewFailed: { ar: "تعذّر إتمام المراجعة.", en: "Couldn't complete the review." },
+    reviewNotAuthorized: { ar: "لا تملك صلاحية مراجعة طلبات الأساتذة.", en: "You're not allowed to review instructor applications." },
     noContext: { ar: "لم يكتب الدارس تفاصيل.", en: "The learner didn't add details." },
     // Stated before the button is pressed, not after — the instructor is
     // authorising a charge against someone else's wallet.

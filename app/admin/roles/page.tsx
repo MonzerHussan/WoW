@@ -5,6 +5,8 @@ import { t } from "@/shared/i18n/translations";
 import { Logo } from "@/shared/components/Logo";
 import { listUsersForRoleAssignment, listUserCapabilities } from "@/shared/services/roles.service";
 import { AdminRolesPageContent } from "@/features/admin/components/AdminRolesPageContent";
+import { listInstructorsForReview } from "@/features/instructors/services/instructors.service";
+import { InstructorReviewQueue } from "@/features/instructors/components/InstructorReviewQueue";
 
 /**
  * Same shape as /admin/pricing (024): permission check before any data
@@ -50,11 +52,12 @@ export default async function AdminRolesPage() {
   }
 
   const users = await listUsersForRoleAssignment(supabase);
-  const [{ data: canAssignSuper }, capabilitiesByUser] = await Promise.all([
+  const [{ data: canAssignSuper }, capabilitiesByUser, instructorsForReview] = await Promise.all([
     canAssignRoles
       ? supabase.rpc("has_permission", { perm: "roles.assign_super" })
       : Promise.resolve({ data: false }),
     canManageCapabilities ? listUserCapabilities(supabase) : Promise.resolve({}),
+    canManageCapabilities ? listInstructorsForReview(supabase) : Promise.resolve([]),
   ]);
 
   return (
@@ -67,6 +70,16 @@ export default async function AdminRolesPage() {
         canManageCapabilities={!!canManageCapabilities}
         capabilitiesByUser={capabilitiesByUser}
         initialLang={initialLang}
+        /* Composed here, not imported inside AdminRolesPageContent:
+           the queue belongs to features/instructors and a feature may
+           not import from a sibling (CLAUDE.md #1). An ELEMENT, not a
+           function — a Server Component cannot hand a function to a
+           Client Component prop; AdminRolesPageContent overrides `lang`
+           via cloneElement so it still follows the live toggle. Same
+           shape as app/assessments' placementSlot. */
+        instructorQueueSlot={
+          <InstructorReviewQueue rows={instructorsForReview} lang={initialLang} />
+        }
       />
     </main>
   );

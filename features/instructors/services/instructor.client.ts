@@ -68,6 +68,67 @@ export async function acceptAssignment(assignmentId: string): Promise<AcceptResu
   return { ok: false, reason, balance: result?.balance, required: result?.required };
 }
 
+export type AvailabilityResult = { ok: true } | { ok: false; reason: "not_approved" | "unknown" };
+
+/**
+ * The instructor's own visibility switch — a plain UPDATE, allowed by
+ * 040's owner policy. NOT a function call, deliberately: availability
+ * carries no privilege and moves no money, so wrapping it in a definer
+ * function would add ceremony for nothing.
+ *
+ * What protects it is 078's guard trigger, not this code: publishing
+ * (false -> true) is refused with 42501 unless approval_status is
+ * 'approved', while hiding is always allowed. So an unapproved
+ * applicant cannot make themselves visible even by calling this
+ * directly, which is the hole 078 closed and which was live before it.
+ *
+ * `.select()` for the same reason as declineAssignment: an UPDATE that
+ * RLS filters to nothing returns neither error nor data, and a switch
+ * that silently does nothing is worse than one that reports failure.
+ */
+export async function setInstructorAvailability(isAvailable: boolean): Promise<AvailabilityResult> {
+  const supabase = supabaseBrowser();
+  const { data: session } = await supabase.auth.getUser();
+  const userId = session.user?.id;
+  if (!userId) return { ok: false, reason: "unknown" };
+
+  const { data, error } = await supabase
+    .from("instructor_profiles")
+    .update({ is_available: isAvailable })
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[instructors] availability update failed:", error);
+    return { ok: false, reason: error.code === "42501" ? "not_approved" : "unknown" };
+  }
+  if (!data) return { ok: false, reason: "unknown" };
+  return { ok: true };
+}
+
+export type ReviewResult = { ok: true; status: string } | { ok: false; reason: "forbidden" | "unknown" };
+
+/** Owner-side approve/reject. The permission lives in
+ *  review_instructor_application() (078), which also writes audit_log —
+ *  this only carries the request. */
+export async function reviewInstructor(
+  userId: string,
+  approve: boolean,
+  note?: string
+): Promise<ReviewResult> {
+  const res = await fetch("/api/admin/instructors/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, approve, note: note || "" }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    return { ok: false, reason: res.status === 403 ? "forbidden" : "unknown" };
+  }
+  return { ok: true, status: data.status };
+}
+
 export type DeclineResult = { ok: true } | { ok: false; reason: "not_pending" | "unknown" };
 
 /**
