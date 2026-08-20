@@ -62,3 +62,20 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # The fourth gate. The three above verify the code COMPILES; this
+      # verifies a page OPENS. Added after the same Server->Client
+      # boundary bug shipped twice (245f4f3 -> /profile, 2026-08-20 ->
+      # /admin/roles), passing all three every time.
+      #
+      # PUBLIC TIER ONLY here, and that limitation is the point of this
+      # comment: the env vars above are placeholders, so no session can be
+      # obtained in CI, and every protected route answers a redirect
+      # without rendering. The bug this gate exists for lives BEHIND auth
+      # — /admin/roles returned 307 signed-out and 500 signed-in from the
+      # same broken build. So CI catches the public subset only; the full
+      # gate runs locally (`npm run smoke`) before every commit, per
+      # CLAUDE.md. Closing this gap in CI needs a dedicated test Supabase
+      # project — TECH_DEBT #6, not a separate item.
+      - name: Smoke (public routes)
+        run: npm run smoke:public

@@ -49,6 +49,55 @@ sprint explicitly revisits one.
   (`btn-primary`, `field-input`, etc.). Don't introduce a parallel styling
   approach without a decision recorded in ARCHITECTURE.md.
 
+### 5a. NEVER pass a function across the Server → Client boundary
+
+**A Server Component may not pass a function as a prop to a Client
+Component. Slot props are passed as `ReactElement<{ lang: Lang }>` and
+their `lang` is overridden with `cloneElement`.**
+
+```tsx
+// ✗ WRONG — 500s at runtime. tsc, lint and build all pass.
+//   Error: Functions cannot be passed directly to Client Components
+<AdminRolesPageContent instructorQueueSlot={(lang) => <Queue lang={lang} />} />
+
+// ✓ RIGHT — an element; the client parent injects the live lang
+<AdminRolesPageContent instructorQueueSlot={<Queue lang={initialLang} />} />
+
+// …and inside the Client Component:
+{slot && isValidElement(slot) && cloneElement(slot, { lang })}
+```
+
+**Why an element and not just a plain node:** a pre-built node freezes at
+the server-rendered language and stops following the page's toggle (the
+independent-`useLang` problem, TECH_DEBT #18/#27). `cloneElement` also
+preserves the component instance across re-renders, so the slot's own
+internal state survives a language switch.
+
+**This is not a hypothetical.** It has shipped twice:
+
+| | |
+|---|---|
+| **commit `245f4f3`** | `placementSlot` as a render-prop function — **500'd `/profile`** |
+| **2026-08-20** | `instructorQueueSlot` as a render-prop function — **500'd `/admin/roles`**, four weeks later, in a file that same commit had touched |
+
+**The rule was already documented both times** — in a comment at
+`ProjectWorkspace.tsx:27` and in `245f4f3`'s own commit message — and was
+broken anyway. A comment inside one file is only read by someone who
+happens to open that file. That is why the rule now lives *here*, in the
+guidelines that are read before writing code.
+
+**Nothing in the toolchain catches it.** `tsc --noEmit`, `npm run lint`
+and `npm run build` all pass; the error only appears when the page is
+actually requested. Worse, the pages most likely to hit it end with
+`redirect()` for signed-out visitors, so an *unauthenticated* smoke check
+never reaches the broken JSX — `/admin/roles` returned `307` without a
+session and `500` with one. This is the whole reason the authenticated
+smoke check is a commit gate (see CLAUDE.md).
+
+Working examples to copy: `gamesSlot` in `ProjectWorkspace.tsx`,
+`placementSlot` in `AssessmentsContent.tsx`, `instructorQueueSlot` in
+`AdminRolesPageContent.tsx`.
+
 ## 6. Database
 - Schema changes are additive migrations in `supabase/migrations/`,
   numbered sequentially. Never edit `schema.sql` retroactively.

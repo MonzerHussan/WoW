@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs",
+    "smoke:public": "node scripts/smoke.mjs --public-only"
   },
   "dependencies": {
     "@supabase/ssr": "^0.4.0",
