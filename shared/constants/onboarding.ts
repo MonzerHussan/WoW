@@ -44,9 +44,33 @@ export const GENDERS: { value: "male" | "female" | "prefer_not_to_say"; ar: stri
   { value: "prefer_not_to_say", ar: "أفضل عدم القول", en: "Prefer not to say" },
 ];
 
+/**
+ * Only levels that EXIST as published courses may appear here. Offering a
+ * level with no content makes onboarding promise something the platform
+ * cannot deliver, and the user meets the gap a minute later with no
+ * explanation.
+ *
+ * Level 4 (PMP Master) has NO course row at all — found by walking the
+ * journey end to end as a fresh user on 2026-08-20. It is marked
+ * `available: false` rather than deleted, deliberately: the choice is
+ * persisted as `profiles.pmp_level_interest`, and ONE REAL ACCOUNT has
+ * already stored 4. Deleting the entry would leave that value with no
+ * label to resolve to, so the row is kept for lookup and withheld from
+ * the choices.
+ *
+ * Levels 2 and 3 DO exist and are published, so they stay — even though
+ * each currently carries 8 lessons against Level 1's 19. Thin content in
+ * a real course, not a missing one.
+ *
+ * When Level 4 ships, flip this flag in the same commit as its course.
+ */
 export const PMP_LEVELS = [
-  { value: 1, ar: "المستوى 1 — أساسيات إدارة المشاريع", en: "Level 1 — PM Foundations" },
-  { value: 2, ar: "المستوى 2 — PMP Practitioner", en: "Level 2 — PMP Practitioner" },
-  { value: 3, ar: "المستوى 3 — PMP Professional", en: "Level 3 — PMP Professional" },
-  { value: 4, ar: "المستوى 4 — PMP Master", en: "Level 4 — PMP Master" },
+  { value: 1, ar: "المستوى 1 — أساسيات إدارة المشاريع", en: "Level 1 — PM Foundations", available: true },
+  { value: 2, ar: "المستوى 2 — PMP Practitioner", en: "Level 2 — PMP Practitioner", available: true },
+  { value: 3, ar: "المستوى 3 — PMP Professional", en: "Level 3 — PMP Professional", available: true },
+  { value: 4, ar: "المستوى 4 — PMP Master", en: "Level 4 — PMP Master", available: false },
 ];
+
+/** The levels a user may actually pick. Always use this to render choices;
+ *  use PMP_LEVELS itself only to resolve a stored value to its label. */
+export const SELECTABLE_PMP_LEVELS = PMP_LEVELS.filter((l) => l.available);

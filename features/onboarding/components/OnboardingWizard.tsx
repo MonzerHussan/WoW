@@ -8,7 +8,7 @@ import { Button } from "@/shared/components/Button";
 import { Card, ErrorState } from "@/shared/components/Feedback";
 import { translateAuthError } from "@/shared/i18n/supabase-errors";
 import { ACCOUNT_TYPES } from "@/shared/constants/account-types";
-import { GOALS, GENDERS, PMP_LEVELS } from "@/shared/constants/onboarding";
+import { GOALS, GENDERS, PMP_LEVELS, SELECTABLE_PMP_LEVELS } from "@/shared/constants/onboarding";
 import { onboardingCompleteSchema } from "@/shared/schemas/onboarding.schema";
 import { completeOnboarding } from "@/features/onboarding/services/onboarding.service";
 import { AccountType, Gender } from "@/shared/types";
@@ -180,7 +180,10 @@ export function OnboardingWizard() {
             <h1 className="font-display font-black text-xl text-navy">{t("onboarding.step3Title")}</h1>
             <p className="text-sm text-ink-soft -mt-2">{t("onboarding.step3Sub")}</p>
             <div className="flex flex-col gap-2">
-              {PMP_LEVELS.map((lvl) => (
+              {/* SELECTABLE_, not PMP_LEVELS: only levels with a real
+                  published course may be offered. The full list is still
+                  used below to label an already-stored choice. */}
+              {SELECTABLE_PMP_LEVELS.map((lvl) => (
                 <button
                   key={lvl.value}
                   onClick={() => setPmpLevel(lvl.value)}

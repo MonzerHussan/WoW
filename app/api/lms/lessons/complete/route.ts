@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/shared/lib/supabase/server";
 import { completeLessonSchema } from "@/shared/schemas/lms.schema";
 import { awardLessonPoints } from "@/shared/services/points.service";
+import { recomputeEnrollmentProgress } from "@/features/lms/services/progress.service";
 import { logger } from "@/shared/lib/logger";
 
 /**
@@ -77,6 +78,23 @@ export async function POST(req: NextRequest) {
   if (upsertError) {
     logger.error("lesson_complete_upsert_failed", { userId: user.id, lessonId, error: upsertError.message });
     return NextResponse.json({ error: "Failed to record completion" }, { status: 500 });
+  }
+
+  // Recomputed HERE, in the one route the completion button calls, rather
+  // than in a second place that could drift from it. Failure is logged and
+  // swallowed for the same reason as the points call below: the lesson IS
+  // completed, and a progress hiccup must not report otherwise.
+  try {
+    const progressResult = await recomputeEnrollmentProgress(supabase, user.id, lessonId);
+    if (progressResult) {
+      logger.info("enrollment_progress_updated", {
+        userId: user.id,
+        courseId: progressResult.courseId,
+        progress: progressResult.progress,
+      });
+    }
+  } catch (err) {
+    logger.error("enrollment_progress_failed", { userId: user.id, lessonId, error: String(err) });
   }
 
   try {
